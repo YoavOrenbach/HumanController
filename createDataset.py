@@ -1,5 +1,5 @@
 # import PIL
-# from PIL import Image, ImageTk
+from PIL import Image, ImageTk
 # from tkinter import *
 from cv2 import cv2
 import os
@@ -7,6 +7,7 @@ import time
 
 #useful link:
 # https://www.analyticsvidhya.com/blog/2021/05/create-your-own-image-dataset-using-opencv-in-machine-learning/
+IMG_SIZE = (300, 300)
 
 camera_port = 1
 if not os.path.exists("dataset"):
@@ -39,8 +40,10 @@ while key_input != "exit":
     while count < 100:
         status, frame = camera.read()
         cv2.imshow("preview", frame)
-        frame = cv2.resize(frame, (160, 160))
-        cv2.imwrite('dataset/'+key_input+'/img'+str(count)+'.png', frame)
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # convert BGR to RGB
+        frame = cv2.resize(frame, IMG_SIZE)  # resize to model if needed
+        #cv2.imwrite('dataset/'+key_input+'/img'+str(count)+'.png', frame)
+        Image.fromarray(frame).save('dataset/'+key_input+'/img'+str(count)+'.png')  # save image in the right coloring order with Pillow
         cv2.waitKey(1)
         count = count + 1
     camera.release()
