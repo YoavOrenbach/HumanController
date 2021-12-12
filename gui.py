@@ -167,15 +167,16 @@ def find_camera_ports():
 
 
 def choose_webcam(camera_ports):
+    variable = tk.StringVar(root)
     if len(camera_ports) > 1:
         tk.Label(root, text="choose which webcam you want to use").pack(anchor="w")
-        variable = tk.StringVar(root)
         camera_ports = ["webcam "+str(port) for port in camera_ports]
-        variable.set(camera_ports[0])
         dropdown = tk.OptionMenu(root, variable, *camera_ports)
         dropdown.pack()
-        return variable
-    return "webcam 0"
+    else:
+        camera_ports = ["webcam 0"]
+    variable.set(camera_ports[0])
+    return variable
 
 
 def camera_preview(parent_frame, camera_variable):
