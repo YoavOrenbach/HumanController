@@ -2,9 +2,9 @@ import tkinter as tk
 import PIL
 from PIL import Image, ImageTk
 from cv2 import cv2
-from createDataset import collectKeyData
-from trainModel import train_movenet
-from predictAndPlay import pose_and_play
+from create_dataset import collectKeyData
+from train_model import train_movenet
+from predict_and_play import pose_and_play
 
 keys = [
     [

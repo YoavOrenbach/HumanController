@@ -5,7 +5,7 @@ from sklearn.model_selection import train_test_split
 from matplotlib import pyplot as plt
 from cv2 import cv2
 from mediapipe.python.solutions import pose as mp_pose
-from blazePoseUtils import FullBodyPoseEmbedder
+from blazepose_utils import FullBodyPoseEmbedder
 
 LEARNING_RATE = 0.01
 
@@ -17,7 +17,7 @@ def blazepose_preprocess_data(data_directory="dataset"):
     label_list = []
     class_num = 0
     for pose_directory in poses_directories:
-        pose_images_path = os.path.join("dataset", pose_directory)
+        pose_images_path = os.path.join(data_directory, pose_directory)
         pose_images = os.listdir(pose_images_path)
         with mp_pose.Pose() as pose_tracker:
             for pose_image in pose_images:
@@ -96,25 +96,6 @@ def blazepose():
     history = train_model(model, X_train, X_val, y_train, y_val)
     plot_train_test(history, "BlazePose")
     model.save("blazepose_saved_model")
-
-
-def evaluate_model():
-    results_dic = {}
-    model = tf.keras.models.load_model("blazepose_saved_model")
-    test_data = os.listdir("testDataset")
-    for test_folder in test_data:
-        test_folder_path = os.path.join("testDataset", test_folder)
-        X, y, _ = blazepose_preprocess_data(data_directory=test_folder_path)
-        loss, accuracy = model.evaluate(X, y)
-        results_dic[test_folder[:5]] = accuracy
-
-    keys = list(results_dic.keys())
-    values = list(results_dic.values())
-    plt.bar(keys, values)
-    plt.title("BlazePose accuracy on test sets")
-    plt.xlabel("test sets")
-    plt.ylabel("test accuracy")
-    plt.show()
 
 
 if __name__ == '__main__':

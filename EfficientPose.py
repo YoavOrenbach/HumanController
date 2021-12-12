@@ -5,7 +5,9 @@ import numpy as np
 import os
 from sklearn.model_selection import train_test_split
 from matplotlib import pyplot as plt
-import efficientPoseUtils
+import efficientpose_utils
+
+LEARNING_RATE = 0.01
 
 
 def get_model(model_name):
@@ -13,10 +15,10 @@ def get_model(model_name):
     model_variant = model_variant[13:] if len(model_variant) > 7 else model_variant
     lite = True if model_variant.endswith('_lite') else False
     set_learning_phase(0)
-    model = load_model(os.path.join('efficientPoseModels', 'keras', 'EfficientPose{0}.h5'.format(model_variant.upper())),
-                       custom_objects={'BilinearWeights': efficientPoseUtils.keras_BilinearWeights,
-                                       'Swish': efficientPoseUtils.Swish(efficientPoseUtils.eswish), 'eswish': efficientPoseUtils.eswish,
-                                       'swish1': efficientPoseUtils.swish1})
+    model = load_model(os.path.join('efficientpose_models', 'keras', 'EfficientPose{0}.h5'.format(model_variant.upper())),
+                       custom_objects={'BilinearWeights': efficientpose_utils.keras_BilinearWeights,
+                                       'Swish': efficientpose_utils.Swish(efficientpose_utils.eswish), 'eswish': efficientpose_utils.eswish,
+                                       'swish1': efficientpose_utils.swish1})
     return model, {'rt': 224, 'i': 256, 'ii': 368, 'iii': 480, 'iv': 600, 'rt_lite': 224, 'i_lite': 256, 'ii_lite': 368}[model_variant], lite
 
 
@@ -35,19 +37,14 @@ def analyze(file_path, model, resolution, lite):
     batch = np.expand_dims(image, axis=0)
 
     # Preprocess batch
-    batch = efficientPoseUtils.preprocess(batch, resolution, lite)
+    batch = efficientpose_utils.preprocess(batch, resolution, lite)
 
     # Perform inference
     batch_outputs = infer(batch, model, lite)
 
     # Extract coordinates
-    coordinates = [efficientPoseUtils.extract_coordinates(batch_outputs[0,...], image_height, image_width)]
+    coordinates = [efficientpose_utils.extract_coordinates(batch_outputs[0, ...], image_height, image_width)]
     return coordinates
-
-
-model_name = 'II_Lite'
-framework_name = 'keras'
-model, resolution, lite = get_model(model_name)
 
 
 def coordinates_to_landmarks(coordinates):
@@ -57,79 +54,85 @@ def coordinates_to_landmarks(coordinates):
     return landmarks
 
 
-def preprocess_data():
-    files = os.listdir("dataset")
-    img_list = []
+def efficientpose_preprocess_data(data_directory="dataset"):
+    model_name = 'II_Lite'
+    framework_name = 'keras'
+    model, resolution, lite = get_model(model_name)
+    poses_directories = os.listdir(data_directory)
+    landmarks_list = []
     label_list = []
-    label_val = 0
-    for file in files:
-        images_path = os.path.join("dataset", file)
+    class_num = 0
+    for pose_directory in poses_directories:
+        images_path = os.path.join(data_directory, pose_directory)
         images = os.listdir(images_path)
         for img in images:
             coordinates = analyze(os.path.join(images_path, img), model, resolution, lite)
             landmarks = coordinates_to_landmarks(coordinates)
-            img_list.append(landmarks)
-            label_list.append(label_val)
-        label_val = label_val + 1
+            landmarks_list.append(landmarks)
+            label_list.append(class_num)
+        class_num = class_num + 1
 
-    img_array = np.asarray(img_list)
+    landmarks_array = np.asarray(landmarks_list)
     label_array = np.asarray(label_list)
     categorical_labels = tf.keras.utils.to_categorical(label_array)
-    return img_array, categorical_labels, label_val
+    return landmarks_array, categorical_labels, class_num
 
 
-X, y, class_num = preprocess_data()
-X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1)
+def define_model(num_classes):
+    inputs = tf.keras.Input(shape=(16, 2))
+    flatten = tf.keras.layers.Flatten()(inputs)
+    layer = tf.keras.layers.Dense(128, activation='relu')(flatten)
+    layer = tf.keras.layers.Dense(64, activation='relu')(layer)
+    outputs = tf.keras.layers.Dense(num_classes, activation="softmax")(layer)
+    model = tf.keras.Model(inputs, outputs)
+    model.summary()
+    return model
 
 
-# Define the model
-inputs = tf.keras.Input(shape=(16, 2))
-flatten = tf.keras.layers.Flatten()(inputs)
-layer = tf.keras.layers.Dense(128, activation='relu')(flatten)
-#layer = tf.keras.layers.Dropout(0.5)(layer)
-layer = tf.keras.layers.Dense(64, activation='relu')(layer)
-#layer = tf.keras.layers.Dropout(0.5)(layer)
-outputs = tf.keras.layers.Dense(class_num, activation="softmax")(layer)
+def train_model(model, X_train, X_val, y_train, y_val):
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=LEARNING_RATE),
+                  loss='categorical_crossentropy',
+                  metrics=['accuracy'])
+    history = model.fit(X_train, y_train,
+                        epochs=20,
+                        batch_size=16,
+                        validation_data=(X_val, y_val))
+    return history
 
-model = tf.keras.Model(inputs, outputs)
-model.summary()
+def plot_train_test(history, model_name):
+    acc = history.history['accuracy']
+    val_acc = history.history['val_accuracy']
 
-base_learning_rate = 0.01
-model.compile(
-    optimizer=tf.keras.optimizers.Adam(learning_rate=base_learning_rate),
-    loss='categorical_crossentropy',
-    metrics=['accuracy']
-)
+    loss = history.history['loss']
+    val_loss = history.history['val_loss']
 
-# Start training
-history = model.fit(X_train, y_train,
-                    epochs=20,
-                    batch_size=16,
-                    validation_data=(X_val, y_val))
+    plt.figure(figsize=(8, 8))
+    plt.suptitle(model_name)
+    plt.subplot(2, 1, 1)
+    plt.plot(acc, label='Training Accuracy')
+    plt.plot(val_acc, label='Validation Accuracy')
+    plt.legend(loc='lower right')
+    plt.ylabel('Accuracy')
+    plt.title('Training and Validation Accuracy')
 
-# Visualize the training history to see whether you're overfitting.
-acc = history.history['accuracy']
-val_acc = history.history['val_accuracy']
+    plt.subplot(2, 1, 2)
+    plt.plot(loss, label='Training Loss')
+    plt.plot(val_loss, label='Validation Loss')
+    plt.legend(loc='upper right')
+    plt.ylabel('Cross Entropy')
+    plt.title('Training and Validation Loss')
+    plt.xlabel('epoch')
+    plt.show()
 
-loss = history.history['loss']
-val_loss = history.history['val_loss']
 
-plt.figure(figsize=(8, 8))
-plt.suptitle('EfficientPose')
-plt.subplot(2, 1, 1)
-plt.plot(acc, label='Training Accuracy')
-plt.plot(val_acc, label='Validation Accuracy')
-plt.legend(loc='lower right')
-plt.ylabel('Accuracy')
-plt.title('Training and Validation Accuracy')
+def efficientpose():
+    X, y, num_classes = efficientpose_preprocess_data()
+    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1)
+    model = define_model(num_classes)
+    history = train_model(model, X_train, X_val, y_train, y_val)
+    plot_train_test(history, "EfficientPose")
+    model.save("efficientpose_saved_model")
 
-plt.subplot(2, 1, 2)
-plt.plot(loss, label='Training Loss')
-plt.plot(val_loss, label='Validation Loss')
-plt.legend(loc='upper right')
-plt.ylabel('Cross Entropy')
-plt.title('Training and Validation Loss')
-plt.xlabel('epoch')
-plt.show()
 
-model.save("efficientPose_saved_model")
+if __name__ == '__main__':
+    efficientpose()

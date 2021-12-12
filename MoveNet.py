@@ -4,8 +4,8 @@ import os
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from matplotlib import pyplot as plt
-from movenetUtils import load_movenet_model, movenet_inference, landmarks_to_embedding
-from movenetUtils import movenet_inference_video, init_crop_region, determine_crop_region
+from movenet_utils import load_movenet_model, movenet_inference, landmarks_to_embedding
+from movenet_utils import movenet_inference_video, init_crop_region, determine_crop_region
 
 # useful links:
 # https://tfhub.dev/s?q=movenet - tf hub for moveNet
@@ -16,7 +16,9 @@ LEARNING_RATE = 0.01
 IMG_SIZE = (256, 256)
 
 
-def movenet_preprocess_data(movenet, input_size, data_directory="dataset", static=True):
+def movenet_preprocess_data(data_directory="dataset", static=False):
+    model_name = "movenet_thunder"
+    movenet, input_size = load_movenet_model(model_name)
     poses_directories = os.listdir(data_directory)
     landmarks_list = []
     label_list = []
@@ -96,36 +98,12 @@ def plot_train_test(history, model_name):
 
 
 def movenet():
-    model_name = "movenet_thunder"
-    movenet, input_size = load_movenet_model(model_name)
-    X, y, num_classes = movenet_preprocess_data(movenet, input_size, static=False)
+    X, y, num_classes = movenet_preprocess_data(static=False)
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1)
     model = define_model(num_classes)
     history = train_model(model, X_train, X_val, y_train, y_val)
     plot_train_test(history, "MoveNet")
     model.save("movenet_saved_model")
-
-
-def evaluate_model():
-    model = tf.keras.models.load_model("movenet_saved_model")
-    model_name = "movenet_thunder"
-    movenet, input_size = load_movenet_model(model_name)
-
-    results_dic = {}
-    test_data = os.listdir("testDataset")
-    for test_folder in test_data:
-        test_folder_path = os.path.join("testDataset", test_folder)
-        X, y, _ = movenet_preprocess_data(movenet, input_size, data_directory=test_folder_path, static=False)
-        loss, accuracy = model.evaluate(X, y)
-        results_dic[test_folder[:5]] = accuracy
-
-    keys = list(results_dic.keys())
-    values = list(results_dic.values())
-    plt.bar(keys, values)
-    plt.title("BlazePose accuracy on test sets")
-    plt.xlabel("test sets")
-    plt.ylabel("test accuracy")
-    plt.show()
 
 
 if __name__ == '__main__':

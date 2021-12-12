@@ -316,7 +316,7 @@ if __name__ == '__main__':
             # Plot pose world landmarks.
             mp_drawing.plot_landmarks(
                 results.pose_world_landmarks, mp_pose.POSE_CONNECTIONS)
-    """
+
     start = time.time()
     num_frames = 0
     # For webcam input:
@@ -354,4 +354,4 @@ if __name__ == '__main__':
     end = time.time()
     seconds = end - start
     fps = num_frames / seconds
-    print("Estimated frames per second : {0}".format(fps))"""
+    print("Estimated frames per second : {0}".format(fps))
