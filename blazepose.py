@@ -6,6 +6,7 @@ from matplotlib import pyplot as plt
 from cv2 import cv2
 from mediapipe.python.solutions import pose as mp_pose
 from blazepose_utils import FullBodyPoseEmbedder
+from tqdm import tqdm
 
 LEARNING_RATE = 0.01
 
@@ -16,7 +17,7 @@ def blazepose_preprocess_data(data_directory="dataset"):
     embedding_list = []
     label_list = []
     class_num = 0
-    for pose_directory in poses_directories:
+    for pose_directory in tqdm(poses_directories):
         pose_images_path = os.path.join(data_directory, pose_directory)
         pose_images = os.listdir(pose_images_path)
         with mp_pose.Pose() as pose_tracker:
@@ -28,6 +29,7 @@ def blazepose_preprocess_data(data_directory="dataset"):
                 pose_landmarks = result.pose_landmarks
                 if pose_landmarks is None:
                     print(os.path.join(pose_images_path, pose_image))
+                    continue
                 pose_landmarks = np.array([[lmk.x * image_width, lmk.y * image_height, lmk.z * image_width]
                                            for lmk in pose_landmarks.landmark], dtype=np.float32)
                 embedding = pose_embedder(pose_landmarks)
@@ -90,8 +92,9 @@ def plot_train_test(history, model_name):
 
 
 def blazepose():
-    X, y, num_classes = blazepose_preprocess_data()
-    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1)
+    X_train, y_train, num_classes = blazepose_preprocess_data()
+    #X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1)
+    X_val, y_val, _ = blazepose_preprocess_data(data_directory="test_dataset/test1-different_clothes")
     model = define_model(num_classes)
     history = train_model(model, X_train, X_val, y_train, y_val)
     plot_train_test(history, "BlazePose")

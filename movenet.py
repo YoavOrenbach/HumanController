@@ -6,6 +6,7 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 from matplotlib import pyplot as plt
 from movenet_utils import load_movenet_model, movenet_inference, landmarks_to_embedding
 from movenet_utils import movenet_inference_video, init_crop_region, determine_crop_region
+from tqdm import tqdm
 
 # useful links:
 # https://tfhub.dev/s?q=movenet - tf hub for moveNet
@@ -16,14 +17,14 @@ LEARNING_RATE = 0.01
 IMG_SIZE = (256, 256)
 
 
-def movenet_preprocess_data(data_directory="dataset", static=False):
+def movenet_preprocess_data(data_directory="dataset", static=True):
     model_name = "movenet_thunder"
     movenet, input_size = load_movenet_model(model_name)
     poses_directories = os.listdir(data_directory)
     landmarks_list = []
     label_list = []
     class_num = 0
-    for pose_directory in poses_directories:
+    for pose_directory in tqdm(poses_directories):
         image_height, image_width = IMG_SIZE[0], IMG_SIZE[1]
         crop_region = init_crop_region(image_height, image_width)
         pose_images_path = os.path.join(data_directory, pose_directory)
@@ -98,8 +99,9 @@ def plot_train_test(history, model_name):
 
 
 def movenet():
-    X, y, num_classes = movenet_preprocess_data(static=False)
-    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1)
+    X_train, y_train, num_classes = movenet_preprocess_data(static=True)
+    #X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1)
+    X_val, y_val, _ = movenet_preprocess_data(data_directory="test_dataset/test1-different_clothes")
     model = define_model(num_classes)
     history = train_model(model, X_train, X_val, y_train, y_val)
     plot_train_test(history, "MoveNet")

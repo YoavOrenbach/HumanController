@@ -5,6 +5,7 @@ import numpy as np
 import os
 from sklearn.model_selection import train_test_split
 from matplotlib import pyplot as plt
+from tqdm import tqdm
 import efficientpose_utils
 
 LEARNING_RATE = 0.01
@@ -53,6 +54,66 @@ def coordinates_to_landmarks(coordinates):
         landmarks[i] = coordinates[0][i][1:]
     return landmarks
 
+landmark_names = ['head_top', 'upper_neck', 'right_shoulder', 'right_elbow', 'right_wrist', 'thorax',
+                  'left_shoulder', 'left_elbow', 'left_wrist', 'pelvis', 'right_hip', 'right_knee',
+                  'right_ankle', 'left_hip', 'left_knee', 'left_ankle']
+
+def get_pose_center(landmarks):
+    """Calculates pose center as point between hips."""
+    left_hip = landmarks[landmark_names.index('left_hip')]
+    right_hip = landmarks[landmark_names.index('right_hip')]
+    center = (left_hip + right_hip) * 0.5
+    return center
+
+
+def get_pose_size(landmarks, torso_size_multiplier):
+    """Calculates pose size.
+
+    It is the maximum of two values:
+      * Torso size multiplied by `torso_size_multiplier`
+      * Maximum distance from pose center to any pose landmark
+    """
+    # This approach uses only 2D landmarks to compute pose size.
+    landmarks = landmarks[:, :2]
+
+    # Hips center.
+    left_hip = landmarks[landmark_names.index('left_hip')]
+    right_hip = landmarks[landmark_names.index('right_hip')]
+    hips = (left_hip + right_hip) * 0.5
+
+    # Shoulders center.
+    left_shoulder = landmarks[landmark_names.index('left_shoulder')]
+    right_shoulder = landmarks[landmark_names.index('right_shoulder')]
+    shoulders = (left_shoulder + right_shoulder) * 0.5
+
+    # Torso size as the minimum body size.
+    torso_size = np.linalg.norm(shoulders - hips)
+
+    # Max dist to pose center.
+    pose_center = get_pose_center(landmarks)
+    max_dist = np.max(np.linalg.norm(landmarks - pose_center, axis=1))
+
+    return max(torso_size * torso_size_multiplier, max_dist)
+
+
+def normalize_pose_landmarks(landmarks, torso_size_multiplier=2.5):
+    landmarks = np.copy(landmarks)
+
+    # Normalize translation.
+    pose_center = get_pose_center(landmarks)
+    landmarks -= pose_center
+
+    # Normalize scale.
+    pose_size = get_pose_size(landmarks, torso_size_multiplier)
+    landmarks /= pose_size
+
+    return landmarks
+
+
+def landmarks_to_embedding(landmarks):
+    landmarks = np.copy(landmarks)
+    embedding = normalize_pose_landmarks(landmarks)
+    return embedding
 
 def efficientpose_preprocess_data(data_directory="dataset"):
     model_name = 'II_Lite'
@@ -62,13 +123,14 @@ def efficientpose_preprocess_data(data_directory="dataset"):
     landmarks_list = []
     label_list = []
     class_num = 0
-    for pose_directory in poses_directories:
+    for pose_directory in tqdm(poses_directories):
         images_path = os.path.join(data_directory, pose_directory)
         images = os.listdir(images_path)
         for img in images:
             coordinates = analyze(os.path.join(images_path, img), model, resolution, lite)
             landmarks = coordinates_to_landmarks(coordinates)
-            landmarks_list.append(landmarks)
+            embeddings = landmarks_to_embedding(landmarks)
+            landmarks_list.append(embeddings)
             label_list.append(class_num)
         class_num = class_num + 1
 
