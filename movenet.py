@@ -2,7 +2,6 @@ import tensorflow as tf
 import numpy as np
 import os
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
 from matplotlib import pyplot as plt
 from movenet_utils import load_movenet_model, movenet_inference, landmarks_to_embedding
 from movenet_utils import movenet_inference_video, init_crop_region, determine_crop_region
@@ -17,7 +16,7 @@ LEARNING_RATE = 0.01
 IMG_SIZE = (256, 256)
 
 
-def movenet_preprocess_data(data_directory="dataset", static=True):
+def movenet_preprocess_data(data_directory="dataset", static=False):
     model_name = "movenet_thunder"
     movenet, input_size = load_movenet_model(model_name)
     poses_directories = os.listdir(data_directory)
@@ -37,6 +36,8 @@ def movenet_preprocess_data(data_directory="dataset", static=True):
             else:
                 landmarks = movenet_inference_video(movenet, image, crop_region, crop_size=[input_size, input_size])
                 crop_region = determine_crop_region(landmarks, image_height, image_width)
+            landmarks[0][0][:, :2] *= image_height
+            #e = landmarks_to_embedding(landmarks)
             landmarks_list.append(landmarks)
             label_list.append(class_num)
         class_num = class_num + 1
@@ -49,8 +50,7 @@ def movenet_preprocess_data(data_directory="dataset", static=True):
 
 def define_model(num_classes):
     inputs = tf.keras.Input(shape=(1, 1, 17, 3))
-    flatten = tf.keras.layers.Flatten()(inputs)
-    embedding = landmarks_to_embedding(flatten)
+    embedding = landmarks_to_embedding(inputs)
     layer = tf.keras.layers.Dense(128, activation='relu')(embedding)
     #layer = tf.keras.layers.Dropout(0.5)(layer)
     layer = tf.keras.layers.Dense(64, activation='relu')(layer)
@@ -99,7 +99,7 @@ def plot_train_test(history, model_name):
 
 
 def movenet():
-    X_train, y_train, num_classes = movenet_preprocess_data(static=True)
+    X_train, y_train, num_classes = movenet_preprocess_data(static=False)
     #X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1)
     X_val, y_val, _ = movenet_preprocess_data(data_directory="test_dataset/test1-different_clothes")
     model = define_model(num_classes)

@@ -53,7 +53,7 @@ class FullBodyPoseEmbedder(object):
 
         # Get embedding.
         #embedding = self._get_pose_distance_embedding(embedding)
-        #embedding = self._distance_embedding(embedding)
+        embedding = self._distance_embedding(embedding)
         #embedding = self._angle_embedding2(embedding)
 
         return embedding[:, :2]
@@ -69,8 +69,6 @@ class FullBodyPoseEmbedder(object):
         # Normalize scale.
         pose_size = self._get_pose_size(landmarks, self._torso_size_multiplier)
         landmarks /= pose_size
-        # Multiplication by 100 is not required, but makes it eaasier to debug.
-        #landmarks *= 100
 
         return landmarks
 
@@ -206,10 +204,10 @@ class FullBodyPoseEmbedder(object):
                               'left_knee', 'right_knee',
                               'left_ankle', 'right_ankle']
         embedding_list = []
-        for landmark1 in relavent_landmarks:
-            for landmark2 in relavent_landmarks:
-                if landmark1 != landmark2:
-                    embedding_list.append(self._euclidean_distance(landmarks, landmark1, landmark2))
+        combinations_list = list(combinations(relavent_landmarks, 2))
+        for pair in combinations_list:
+            #embedding_list.append(self._euclidean_distance(landmarks, pair[0], pair[1]))
+            embedding_list.append(self._get_distance_by_names(landmarks, pair[0], pair[1]))
         embedding = np.asarray(embedding_list)
         return embedding
 
@@ -228,14 +226,6 @@ class FullBodyPoseEmbedder(object):
                               'left_knee', 'right_knee',
                               'left_ankle', 'right_ankle']
         embedding_list = []
-        """
-        for landmark1 in relavent_landmarks:
-            for landmark2 in relavent_landmarks:
-                if landmark1 != landmark2:
-                    for landmark3 in relavent_landmarks:
-                        if landmark3 != landmark1 and landmark3 != landmark2:
-                            embedding_list.append(self._angle(landmarks, landmark1, landmark2, landmark3))
-        """
         combinations_list = list(combinations(relavent_landmarks, 3))
         for triplet in combinations_list:
             embedding_list.append(self._angle(landmarks, *triplet))
@@ -263,6 +253,43 @@ class FullBodyPoseEmbedder(object):
         if angle < 0:
             angle = angle + 360
         return angle
+
+"""
+class BodyPart(enum.Enum):
+    NOSE = 0
+    LEFT_EYE_INNER = 1
+    LEFT_EYE = 2
+    LEFT_EYE_OUTER = 3
+    RIGHT_EYE_INNER = 4
+    RIGHT_EYE = 5
+    RIGHT_EYE_OUTER = 6
+    LEFT_EAR = 7
+    RIGHT_EAR = 8
+    MOUTH_LEFT = 9
+    MOUTH_RIGHT = 10
+    LEFT_SHOULDER = 11
+    RIGHT_SHOULDER = 12
+    LEFT_ELBOW = 13
+    RIGHT_ELBOW = 14
+    LEFT_WRIST = 15
+    RIGHT_WRIST = 16
+    LEFT_PINKY = 17
+    RIGHT_PINKY = 18
+    LEFT_INDEX = 19
+    RIGHT_INDEX = 20
+    LEFT_THUMB = 21
+    RIGHT_THUMB = 22
+    LEFT_HIP = 23
+    RIGHT_HIP = 24
+    LEFT_KNEE = 25
+    RIGHT_KNEE = 26
+    LEFT_ANKLE = 27
+    RIGHT_ANKLE = 28
+    LEFT_HEEL = 29
+    RIGHT_HEEL = 30
+    LEFT_FOOT_INDEX = 31
+    RIGHT_FOOT_INDEX = 32
+"""
 
 
 if __name__ == '__main__':
