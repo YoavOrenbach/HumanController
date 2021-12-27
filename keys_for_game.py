@@ -58,15 +58,15 @@ def ReleaseKey(hexKeyCode):
     ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
 
 
-def left_click():
+def left_click_press():
     extra = ctypes.c_ulong(0)
     ii_ = Input_I()
     ii_.mi = MouseInput(0, 0, 0, 0x0002, 0, ctypes.pointer(extra))
     x = Input(ctypes.c_ulong(0), ii_)
     ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
 
-    time.sleep(0.5) # might not be necessary
 
+def left_click_release():
     extra = ctypes.c_ulong(0)
     ii_ = Input_I()
     ii_.mi = MouseInput(0, 0, 0, 0x0004, 0, ctypes.pointer(extra))
@@ -74,15 +74,15 @@ def left_click():
     ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
 
 
-def right_click():
+def right_click_press():
     extra = ctypes.c_ulong(0)
     ii_ = Input_I()
     ii_.mi = MouseInput(0, 0, 0, 0x0008, 0, ctypes.pointer(extra))
     x = Input(ctypes.c_ulong(0), ii_)
     ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
 
-    time.sleep(0.5)  # might not be necessary
 
+def right_click_release():
     extra = ctypes.c_ulong(0)
     ii_ = Input_I()
     ii_.mi = MouseInput(0, 0, 0, 0x0010, 0, ctypes.pointer(extra))
@@ -94,6 +94,6 @@ if __name__ == '__main__':
     for i in range(5):
         time.sleep(2)
         PressKey(0x1F)
-        time.sleep(0.5)
+        time.sleep(0.0000001)
         ReleaseKey(0x1F)
         #left_click()

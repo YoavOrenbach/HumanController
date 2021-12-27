@@ -2,36 +2,44 @@ import tensorflow as tf
 import numpy as np
 import os
 from movenet_utils import load_movenet_model, movenet_inference, landmarks_to_embedding
+from movenet_utils import movenet_inference_video, init_crop_region, determine_crop_region
+from tqdm import tqdm
 
 LEARNING_RATE = 0.01
+IMG_SIZE = (256, 256)
 
 
-def preprocess_data(movenet, input_size):
-    files = os.listdir("dataset")
-    img_list = []
+def preprocess_data(data_directory="dataset"):
+    model_name = "movenet_thunder"
+    movenet, input_size = load_movenet_model(model_name)
+    poses_directories = os.listdir(data_directory)
+    landmarks_list = []
     label_list = []
     class_num = 0
-    for file in files:
-        images_path = os.path.join("dataset", file)
-        images = os.listdir(images_path)
-        for img in images:
-            image = tf.io.read_file(os.path.join(images_path, img))
+    for pose_directory in tqdm(poses_directories):
+        image_height, image_width = IMG_SIZE[0], IMG_SIZE[1]
+        crop_region = init_crop_region(image_height, image_width)
+        pose_images_path = os.path.join(data_directory, pose_directory)
+        pose_images = os.listdir(pose_images_path)
+        for pose_image in pose_images:
+            image = tf.io.read_file(os.path.join(pose_images_path, pose_image))
             image = tf.image.decode_jpeg(image)
-            landmarks = movenet_inference(image, movenet, input_size)
-            img_list.append(landmarks)
+            landmarks = movenet_inference_video(movenet, image, crop_region, crop_size=[input_size, input_size])
+            crop_region = determine_crop_region(landmarks, image_height, image_width)
+            landmarks[0][0][:, :2] *= image_height
+            landmarks_list.append(landmarks)
             label_list.append(class_num)
         class_num = class_num + 1
 
-    img_array = np.asarray(img_list)
+    landmarks_array = np.asarray(landmarks_list)
     label_array = np.asarray(label_list)
     categorical_labels = tf.keras.utils.to_categorical(label_array)
-    return img_array, categorical_labels, class_num
+    return landmarks_array, categorical_labels, class_num
 
 
 def define_model(num_classes):
     inputs = tf.keras.Input(shape=(1, 1, 17, 3))
-    flatten = tf.keras.layers.Flatten()(inputs)
-    embedding = landmarks_to_embedding(flatten)
+    embedding = landmarks_to_embedding(inputs)
     layer = tf.keras.layers.Dense(128, activation='relu')(embedding)
     layer = tf.keras.layers.Dense(64, activation='relu')(layer)
     outputs = tf.keras.layers.Dense(num_classes, activation="softmax")(layer)
@@ -50,9 +58,7 @@ def train(model, X_train, y_train):
 
 
 def train_movenet():
-    model_name = "movenet_thunder"
-    movenet, input_size = load_movenet_model(model_name)
-    X, y, num_classes = preprocess_data(movenet, input_size)
+    X, y, num_classes = preprocess_data()
     model = define_model(num_classes)
     train(model, X, y)
 

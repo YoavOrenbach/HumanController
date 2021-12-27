@@ -188,8 +188,9 @@ def plot_train_test(history, model_name):
 
 
 def efficientpose():
-    X, y, num_classes = efficientpose_preprocess_data()
-    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1)
+    X_train, y_train, num_classes = efficientpose_preprocess_data()
+    #X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1)
+    X_val, y_val, _ = efficientpose_preprocess_data(data_directory="test_dataset/test1-different_clothes")
     model = define_model(num_classes)
     history = train_model(model, X_train, X_val, y_train, y_val)
     plot_train_test(history, "EfficientPose")

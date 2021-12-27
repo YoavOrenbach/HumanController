@@ -1,7 +1,30 @@
 import numpy as np
 import tensorflow as tf
 import tensorflow_hub as hub
-from movenet_data import BodyPart
+#from movenet_data import BodyPart
+from itertools import combinations
+
+KEYPOINT_DICT = {
+    'nose': 0,
+    'left_eye': 1,
+    'right_eye': 2,
+    'left_ear': 3,
+    'right_ear': 4,
+    'left_shoulder': 5,
+    'right_shoulder': 6,
+    'left_elbow': 7,
+    'right_elbow': 8,
+    'left_wrist': 9,
+    'right_wrist': 10,
+    'left_hip': 11,
+    'right_hip': 12,
+    'left_knee': 13,
+    'right_knee': 14,
+    'left_ankle': 15,
+    'right_ankle': 16
+}
+# Confidence score to determine whether a keypoint prediction is reliable.
+MIN_CROP_KEYPOINT_SCORE = 0.2
 
 
 def load_movenet_model(model_name):
@@ -85,8 +108,8 @@ def movenet_inference(image, movenet, input_size):
 def get_center_point(landmarks, left_bodypart, right_bodypart):
     """Calculates the center point of the two given landmarks."""
 
-    left = tf.gather(landmarks, left_bodypart.value, axis=1)
-    right = tf.gather(landmarks, right_bodypart.value, axis=1)
+    left = tf.gather(landmarks, left_bodypart, axis=1)
+    right = tf.gather(landmarks, right_bodypart, axis=1)
     center = left * 0.5 + right * 0.5
     return center
 
@@ -99,28 +122,22 @@ def get_pose_size(landmarks, torso_size_multiplier=2.5):
       * Maximum distance from pose center to any pose landmark
     """
     # Hips center
-    hips_center = get_center_point(landmarks, BodyPart.LEFT_HIP,
-                                   BodyPart.RIGHT_HIP)
+    hips_center = get_center_point(landmarks, KEYPOINT_DICT['left_hip'], KEYPOINT_DICT['right_hip'])
 
     # Shoulders center
-    shoulders_center = get_center_point(landmarks, BodyPart.LEFT_SHOULDER,
-                                        BodyPart.RIGHT_SHOULDER)
+    shoulders_center = get_center_point(landmarks, KEYPOINT_DICT['left_shoulder'], KEYPOINT_DICT['right_shoulder'])
 
     # Torso size as the minimum body size
     torso_size = tf.linalg.norm(shoulders_center - hips_center)
 
     # Pose center
-    pose_center_new = get_center_point(landmarks, BodyPart.LEFT_HIP,
-                                       BodyPart.RIGHT_HIP)
+    pose_center_new = get_center_point(landmarks, KEYPOINT_DICT['left_hip'], KEYPOINT_DICT['right_hip'])
     pose_center_new = tf.expand_dims(pose_center_new, axis=1)
-    # Broadcast the pose center to the same size as the landmark vector to
-    # perform substraction
-    pose_center_new = tf.broadcast_to(pose_center_new,
-                                      [tf.size(landmarks) // (17*2), 17, 2])
+    # Broadcast the pose center to the same size as the landmark vector to perform substraction
+    pose_center_new = tf.broadcast_to(pose_center_new, [tf.size(landmarks) // (17*2), 17, 2])
 
     # Dist to pose center
-    d = tf.gather(landmarks - pose_center_new, 0, axis=0,
-                  name="dist_to_pose_center")
+    d = tf.gather(landmarks - pose_center_new, 0, axis=0, name="dist_to_pose_center")
     # Max dist to pose center
     max_dist = tf.reduce_max(tf.linalg.norm(d, axis=0))
 
@@ -135,13 +152,10 @@ def normalize_pose_landmarks(landmarks):
     scaling it to a constant pose size.
     """
     # Move landmarks so that the pose center becomes (0,0)
-    pose_center = get_center_point(landmarks, BodyPart.LEFT_HIP,
-                                   BodyPart.RIGHT_HIP)
+    pose_center = get_center_point(landmarks, KEYPOINT_DICT['left_hip'], KEYPOINT_DICT['right_hip'])
     pose_center = tf.expand_dims(pose_center, axis=1)
-    # Broadcast the pose center to the same size as the landmark vector to perform
-    # substraction
-    pose_center = tf.broadcast_to(pose_center,
-                                  [tf.size(landmarks) // (17*2), 17, 2])
+    # Broadcast the pose center to the same size as the landmark vector to perform substraction
+    pose_center = tf.broadcast_to(pose_center, [tf.size(landmarks) // (17*2), 17, 2])
     landmarks = landmarks - pose_center
 
     # Scale the landmarks to a constant pose size
@@ -149,6 +163,28 @@ def normalize_pose_landmarks(landmarks):
     landmarks /= pose_size
 
     return landmarks
+
+
+def get_distance_by_names(landmarks, name_from, name_to):
+    lmk_from = tf.gather(landmarks, KEYPOINT_DICT[name_from], axis=1)
+    lmk_to = tf.gather(landmarks, KEYPOINT_DICT[name_to], axis=1)
+    return lmk_to - lmk_from
+
+
+def distance_embedding(landmarks):
+    relavent_landmarks = ['nose',
+                          'left_shoulder', 'right_shoulder',
+                          'left_elbow', 'right_elbow',
+                          'left_wrist', 'right_wrist',
+                          'left_hip', 'right_hip',
+                          'left_knee', 'right_knee',
+                          'left_ankle', 'right_ankle']
+    embedding_list = []
+    combinations_list = list(combinations(relavent_landmarks, 2))
+    for pair in combinations_list:
+        embedding_list.append(get_distance_by_names(landmarks, pair[0], pair[1]))
+    embedding = tf.stack(embedding_list, axis=1)
+    return embedding
 
 
 def landmarks_to_embedding(landmarks_and_scores):
@@ -159,33 +195,13 @@ def landmarks_to_embedding(landmarks_and_scores):
     # Normalize landmarks 2D
     landmarks = normalize_pose_landmarks(reshaped_inputs[:, :, :2])
 
+    # pairwise distances
+    landmarks = distance_embedding(landmarks)
+
     # Flatten the normalized landmark coordinates into a vector
     embedding = tf.keras.layers.Flatten()(landmarks)
 
     return embedding
-
-
-KEYPOINT_DICT = {
-    'nose': 0,
-    'left_eye': 1,
-    'right_eye': 2,
-    'left_ear': 3,
-    'right_ear': 4,
-    'left_shoulder': 5,
-    'right_shoulder': 6,
-    'left_elbow': 7,
-    'right_elbow': 8,
-    'left_wrist': 9,
-    'right_wrist': 10,
-    'left_hip': 11,
-    'right_hip': 12,
-    'left_knee': 13,
-    'right_knee': 14,
-    'left_ankle': 15,
-    'right_ankle': 16
-}
-# Confidence score to determine whether a keypoint prediction is reliable.
-MIN_CROP_KEYPOINT_SCORE = 0.2
 
 
 def init_crop_region(image_height, image_width):
