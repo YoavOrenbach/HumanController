@@ -44,7 +44,7 @@ def blazepose_preprocess_data(data_directory="dataset"):
 
 
 def define_model(num_classes):
-    inputs = tf.keras.Input(shape=(33, 2))
+    inputs = tf.keras.Input(shape=(78, 2))
     flatten = tf.keras.layers.Flatten()(inputs)
     layer = tf.keras.layers.Dense(128, activation='relu')(flatten)
     layer = tf.keras.layers.Dense(64, activation='relu')(layer)
