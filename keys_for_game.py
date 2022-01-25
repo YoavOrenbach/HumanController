@@ -21,10 +21,20 @@ class HardwareInput(ctypes.Structure):
                 ("wParamH", ctypes.c_ushort)]
 
 
+"""
 class MouseInput(ctypes.Structure):
     _fields_ = [("dx", ctypes.c_long),
                 ("dy", ctypes.c_long),
                 ("mouseData", ctypes.c_ulong),
+                ("dwFlags", ctypes.c_ulong),
+                ("time",ctypes.c_ulong),
+                ("dwExtraInfo", PUL)]
+"""
+
+class MouseInput(ctypes.Structure):
+    _fields_ = [("dx", ctypes.c_long),
+                ("dy", ctypes.c_long),
+                ("dwData", ctypes.c_ulong),
                 ("dwFlags", ctypes.c_ulong),
                 ("time",ctypes.c_ulong),
                 ("dwExtraInfo", PUL)]
@@ -90,10 +100,138 @@ def right_click_release():
     ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
 
 
+def middle_click_press():
+    extra = ctypes.c_ulong(0)
+    ii_ = Input_I()
+    ii_.mi = MouseInput(0, 0, 0, 0x0020, 0, ctypes.pointer(extra))
+    x = Input(ctypes.c_ulong(0), ii_)
+    ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
+
+
+def middle_click_release():
+    extra = ctypes.c_ulong(0)
+    ii_ = Input_I()
+    ii_.mi = MouseInput(0, 0, 0, 0x0040, 0, ctypes.pointer(extra))
+    x = Input(ctypes.c_ulong(0), ii_)
+    ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
+
+
+def wheel_movement(move):
+    extra = ctypes.c_ulong(0)
+    ii_ = Input_I()
+    ii_.mi = MouseInput(0, 0, move, 0x0800, 0, ctypes.pointer(extra))
+    x = Input(ctypes.c_ulong(0), ii_)
+    ctypes.windll.user32.SendInput(1, ctypes.pointer(x), ctypes.sizeof(x))
+
+
+def move_mouse(x, y):
+    extra = ctypes.c_ulong(0)
+    ii_ = Input_I()
+    #x = int(x*(65536/ctypes.windll.user32.GetSystemMetrics(0))+1)
+    #y = int(y*(65536/ctypes.windll.user32.GetSystemMetrics(1))+1)
+    ii_.mi = MouseInput(x, y, 0, 0x0001, 0, ctypes.pointer(extra))
+    cmd = Input(ctypes.c_ulong(0), ii_)
+    ctypes.windll.user32.SendInput(1, ctypes.pointer(cmd), ctypes.sizeof(cmd))
+
+
 if __name__ == '__main__':
+    keycode_dictionary = {
+        'Esc': 0x01,
+        '1': 0x02,
+        '2': 0x03,
+        '3': 0x04,
+        '4': 0x05,
+        '5': 0x06,
+        '6': 0x07,
+        '7': 0x08,
+        '8': 0x09,
+        '9': 0x0A,
+        '0': 0x0B,
+        '-': 0x0C,
+        '=': 0x0D,
+        'Backspace': 0x0E,
+        'Tab': 0x0F,
+        'Q': 0x10,
+        'W': 0x11,
+        'E': 0x12,
+        'R': 0x13,
+        'T': 0x14,
+        'Y': 0x15,
+        'U': 0x16,
+        'I': 0x17,
+        'O': 0x18,
+        'P': 0x19,
+        '[': 0x1A,
+        ']': 0x1B,
+        'Enter': 0x1C,
+        'Ctrl': 0x1D,  # left Ctrl
+        'A': 0x1E,
+        'S': 0x1F,
+        'D': 0x20,
+        'F': 0x21,
+        'G': 0x22,
+        'H': 0x23,
+        'J': 0x24,
+        'K': 0x25,
+        'L': 0x26,
+        ';': 0x27,
+        "'": 0x28,
+        'Shift': 0x2A,  # left Shift
+        'backslash': 0x2B,
+        'Z': 0x2C,
+        'X': 0x2D,
+        'C': 0x2E,
+        'V': 0x2F,
+        'B': 0x30,
+        'N': 0x31,
+        'M': 0x32,
+        ',': 0x31,
+        '.': 0x34,
+        'slash': 0x35,
+        'Alt': 0x38,  # left Alt
+        'Space': 0x39,
+        'Caps': 0x3A,
+        'F1': 0x3B,
+        'F2': 0x3C,
+        'F3': 0x3D,
+        'F4': 0x3E,
+        'F5': 0x3F,
+        'F6': 0x40,
+        'F7': 0x41,
+        'F8': 0x42,
+        'F9': 0x43,
+        'F10': 0x44,
+        'F11': 0x57,
+        'F12': 0x58,
+        'Scroll': 0x46,
+        'Pause': 0xC5,
+        'Home': 0xC7,
+        'PageUp': 0xC9,
+        'PageDown': 0xD1,
+        'End': 0xCF,
+        'Insert': 0xD2,
+        'Delete': 0xD3,
+        'Up': 0xC8,
+        'Left': 0xCB,
+        'Right': 0xCD,
+        'Down': 0xD0,
+        'Menu': 0xDD,
+        'Windows': 0xDB
+    }
+
+    press_dictionary = {'S': PressKey}
+
+    release_dictionary = {'S': ReleaseKey}
+
     for i in range(5):
         time.sleep(2)
-        PressKey(0x1F)
-        time.sleep(0.0000001)
-        ReleaseKey(0x1F)
-        #left_click()
+        #press_dictionary['S'](keycode_dictionary['S'])
+        #ReleaseKey(0x1F)
+        # move right:
+        #move_mouse(100, 0)
+        # move left:
+        #move_mouse(-100, 0)
+        # move down:
+        #move_mouse(0, 100)
+        # move up:
+        #move_mouse(0, -100)

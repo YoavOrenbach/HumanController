@@ -8,7 +8,7 @@ from mediapipe.python.solutions import pose as mp_pose
 from blazepose_utils import FullBodyPoseEmbedder
 from tqdm import tqdm
 
-LEARNING_RATE = 0.01
+LEARNING_RATE = 0.001
 
 
 def blazepose_preprocess_data(data_directory="dataset"):
@@ -46,8 +46,12 @@ def blazepose_preprocess_data(data_directory="dataset"):
 def define_model(num_classes):
     inputs = tf.keras.Input(shape=(78, 2))
     flatten = tf.keras.layers.Flatten()(inputs)
+    #layer = tf.keras.layers.Dense(128, activation=tf.nn.relu6, kernel_regularizer=tf.keras.regularizers.l2(0.0001))(flatten)
+    #layer = tf.keras.layers.Dense(64, activation=tf.nn.relu6, kernel_regularizer=tf.keras.regularizers.l2(0.0001))(layer)
     layer = tf.keras.layers.Dense(128, activation='relu')(flatten)
+    layer = tf.keras.layers.Dropout(0.5)(layer)
     layer = tf.keras.layers.Dense(64, activation='relu')(layer)
+    layer = tf.keras.layers.Dropout(0.5)(layer)
     outputs = tf.keras.layers.Dense(num_classes, activation="softmax")(layer)
     model = tf.keras.Model(inputs, outputs)
     model.summary()
@@ -58,10 +62,12 @@ def train_model(model, X_train, X_val, y_train, y_val):
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=LEARNING_RATE),
                   loss='categorical_crossentropy',
                   metrics=['accuracy'])
+    earlystopping = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=20)
     history = model.fit(X_train, y_train,
-                        epochs=20,
-                        batch_size=16,
-                        validation_data=(X_val, y_val))
+                        epochs=50,
+                        batch_size=32,
+                        validation_data=(X_val, y_val),
+                        callbacks=[earlystopping])
     return history
 
 
@@ -92,9 +98,9 @@ def plot_train_test(history, model_name):
 
 
 def blazepose():
-    X_train, y_train, num_classes = blazepose_preprocess_data()
+    X_train, y_train, num_classes = blazepose_preprocess_data(data_directory="dataset_enhanced/300")
     #X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1)
-    X_val, y_val, _ = blazepose_preprocess_data(data_directory="test_dataset/test1-different_clothes")
+    X_val, y_val, _ = blazepose_preprocess_data(data_directory="test_dataset/test7-ultimate")
     model = define_model(num_classes)
     history = train_model(model, X_train, X_val, y_train, y_val)
     plot_train_test(history, "BlazePose")

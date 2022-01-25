@@ -5,7 +5,7 @@ from movenet_utils import load_movenet_model, movenet_inference, landmarks_to_em
 from movenet_utils import movenet_inference_video, init_crop_region, determine_crop_region
 from tqdm import tqdm
 
-LEARNING_RATE = 0.01
+LEARNING_RATE = 0.001
 IMG_SIZE = (256, 256)
 
 
@@ -40,8 +40,12 @@ def preprocess_data(data_directory="dataset"):
 def define_model(num_classes):
     inputs = tf.keras.Input(shape=(1, 1, 17, 3))
     embedding = landmarks_to_embedding(inputs)
-    layer = tf.keras.layers.Dense(128, activation='relu')(embedding)
+    layer = tf.keras.layers.Dense(256, activation='relu')(embedding)
+    layer = tf.keras.layers.Dropout(0.5)(layer)
+    layer = tf.keras.layers.Dense(128, activation='relu')(layer)
+    layer = tf.keras.layers.Dropout(0.5)(layer)
     layer = tf.keras.layers.Dense(64, activation='relu')(layer)
+    layer = tf.keras.layers.Dropout(0.5)(layer)
     outputs = tf.keras.layers.Dense(num_classes, activation="softmax")(layer)
     model = tf.keras.Model(inputs, outputs)
     return model
@@ -52,8 +56,8 @@ def train(model, X_train, y_train):
                   loss='categorical_crossentropy',
                   metrics=['accuracy'])
     model.fit(X_train, y_train,
-              epochs=20,
-              batch_size=16)
+              epochs=50,
+              batch_size=32)
     model.save("saved_model")
 
 
