@@ -102,7 +102,7 @@ def plot_train_test(history, model_name):
 
 
 def movenet():
-    X_train, y_train, num_classes = movenet_preprocess_data(static=False)
+    X_train, y_train, num_classes = movenet_preprocess_data(data_directory="dataset_enhanced/300", static=False)
     #X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1)
     X_val, y_val, _ = movenet_preprocess_data(data_directory="test_dataset/test7-ultimate")
     model = define_model(num_classes)

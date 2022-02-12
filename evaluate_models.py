@@ -268,18 +268,18 @@ def evaluate_ultimate_model(model_name, threshold):
     precision = 100*true_positive/(true_positive + false_positive)
     recall = 100*true_positive/(true_positive + false_negative)
     F1_score = 100*2*true_positive/(2*true_positive + false_positive + false_negative)
-    """
+
     print(model_name + " accuracy : ", 100*correct/total)
     print(model_name + " precision : ", 100*true_positive/(true_positive + false_positive))
     print(model_name + " recall : ", 100*true_positive/(true_positive + false_negative))
     print(model_name + " F1-score : ", 100*2*true_positive/(2*true_positive + false_positive + false_negative))
-    """
+
     return accuracy, precision, recall, F1_score
 
 
 def plot_ultimate_model(model_name):
     accuracy_list, precision_list, recall_list, F1_list = [], [], [], []
-    thresholds = [0.6, 0.7, 0.8, 0.90, 0.99] # 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98,
+    thresholds = [0.6, 0.7, 0.8, 0.90, 0.99]  # 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98,
     for threshold in thresholds:
         accuracy, precision, recall, F1_score = evaluate_ultimate_model(model_name, threshold)
         accuracy_list.append(accuracy)
@@ -301,12 +301,12 @@ def plot_ultimate_model(model_name):
 
 if __name__ == '__main__':
     # individual bar plots:
-    """
-    movenet_dic = evaluate_model("movenet", movenet_preprocess_data)
-    results_bar_plot("movenet", movenet_dic)
-    #blazepose_dic = evaluate_model("blazepose", blazepose_preprocess_data)
-    #results_bar_plot("blazepose", blazepose_dic)
-    """
+
+    #movenet_dic = evaluate_model("movenet", movenet_preprocess_data)
+    #results_bar_plot("movenet", movenet_dic)
+    blazepose_dic = evaluate_model("blazepose", blazepose_preprocess_data)
+    results_bar_plot("blazepose", blazepose_dic)
+
 
     # all models bar plot:
     """
@@ -320,10 +320,12 @@ if __name__ == '__main__':
 
     # confusion matrix:
     """
-    model_confusion_matrix("blazepose", blazepose_preprocess_data, "test_dataset/test5-bad_lighting")
+    model_confusion_matrix("movenet", movenet_preprocess_data, "test_dataset/test7-ultimate")
+    model_confusion_matrix("blazepose", blazepose_preprocess_data, "test_dataset/test7-ultimate")
     """
 
     # ultimate test:
-    #evaluate_ultimate_model("blazepose")
-    #evaluate_ultimate_model("movenet")
-    plot_ultimate_model("blazepose")
+    #evaluate_ultimate_model("movenet", 0.95)
+    #evaluate_ultimate_model("blazepose", 0.95)
+    #plot_ultimate_model("movenet")
+    #plot_ultimate_model("blazepose")

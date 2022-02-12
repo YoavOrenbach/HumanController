@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 import os
-from movenet_utils import load_movenet_model, movenet_inference, landmarks_to_embedding
+from movenet_utils import load_movenet_model, landmarks_to_embedding
 from movenet_utils import movenet_inference_video, init_crop_region, determine_crop_region
 from tqdm import tqdm
 
@@ -9,10 +9,10 @@ LEARNING_RATE = 0.001
 IMG_SIZE = (256, 256)
 
 
-def preprocess_data(data_directory="dataset"):
+def preprocess_data(data_directory):
     model_name = "movenet_thunder"
     movenet, input_size = load_movenet_model(model_name)
-    poses_directories = os.listdir(data_directory)
+    poses_directories = ['pose'+str(i+1) for i in range(len(os.listdir(data_directory)))]
     landmarks_list = []
     label_list = []
     class_num = 0
@@ -58,14 +58,14 @@ def train(model, X_train, y_train):
     model.fit(X_train, y_train,
               epochs=50,
               batch_size=32)
-    model.save("saved_model")
 
 
-def train_movenet():
-    X, y, num_classes = preprocess_data()
+def controller_model(data_directory, model_directory):
+    X, y, num_classes = preprocess_data(data_directory)
     model = define_model(num_classes)
     train(model, X, y)
+    model.save(model_directory)
 
 
 if __name__ == '__main__':
-    train_movenet()
+    controller_model("datasets/dataset1", "saved_models/model1")

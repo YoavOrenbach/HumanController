@@ -7,6 +7,10 @@ from cv2 import cv2
 from mediapipe.python.solutions import pose as mp_pose
 from blazepose_utils import FullBodyPoseEmbedder
 from tqdm import tqdm
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.neural_network import MLPClassifier
 
 LEARNING_RATE = 0.001
 
@@ -39,8 +43,10 @@ def blazepose_preprocess_data(data_directory="dataset"):
 
     embedding_array = np.asarray(embedding_list)
     label_array = np.asarray(label_list)
-    categorical_labels = tf.keras.utils.to_categorical(label_array)
-    return embedding_array, categorical_labels, class_num
+    #categorical_labels = tf.keras.utils.to_categorical(label_array)
+    #return embedding_array, categorical_labels, class_num
+    embedding_array = embedding_array.reshape(embedding_array.shape[0], (embedding_array.shape[1]*embedding_array.shape[2]))
+    return embedding_array, label_array, class_num
 
 
 def define_model(num_classes):
@@ -54,6 +60,32 @@ def define_model(num_classes):
     layer = tf.keras.layers.Dropout(0.5)(layer)
     outputs = tf.keras.layers.Dense(num_classes, activation="softmax")(layer)
     model = tf.keras.Model(inputs, outputs)
+    model.summary()
+    return model
+
+
+def define_model_attn(num_classes):
+    query_input = tf.keras.Input(shape=(78, 2))
+    value_input = tf.keras.Input(shape=(78, 2))
+
+    query_flatten = tf.keras.layers.Flatten()(query_input)
+    value_flatten = tf.keras.layers.Flatten()(value_input)
+
+    query_encoding = tf.keras.layers.Dense(128, activation='relu')(query_flatten)
+    value_encoding = tf.keras.layers.Dense(128, activation='relu')(value_flatten)
+
+    attention = tf.keras.layers.Attention()([query_encoding, value_encoding])
+    input_layer = tf.keras.layers.Concatenate()([query_encoding, attention])
+
+
+    layer = tf.keras.layers.Dense(256, activation='relu')(input_layer)
+    layer = tf.keras.layers.Dropout(0.5)(layer)
+    layer = tf.keras.layers.Dense(128, activation='relu')(query_encoding)
+    layer = tf.keras.layers.Dropout(0.5)(layer)
+    layer = tf.keras.layers.Dense(64, activation='relu')(layer)
+    layer = tf.keras.layers.Dropout(0.5)(layer)
+    outputs = tf.keras.layers.Dense(num_classes, activation="softmax")(layer)
+    model = tf.keras.Model([query_input, value_input], outputs)
     model.summary()
     return model
 
@@ -98,14 +130,29 @@ def plot_train_test(history, model_name):
 
 
 def blazepose():
-    X_train, y_train, num_classes = blazepose_preprocess_data(data_directory="dataset_enhanced/300")
-    #X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1)
-    X_val, y_val, _ = blazepose_preprocess_data(data_directory="test_dataset/test7-ultimate")
+    X, y, num_classes = blazepose_preprocess_data(data_directory="dataset_enhanced/300")
+    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1)
+    #X_val, y_val, _ = blazepose_preprocess_data(data_directory="test_dataset/test7-ultimate")
     model = define_model(num_classes)
     history = train_model(model, X_train, X_val, y_train, y_val)
     plot_train_test(history, "BlazePose")
     model.save("blazepose_saved_model")
 
 
+def sk(model, X_train, y_train, X_test, y_test, model_name):
+    model.fit(X_train, y_train)
+    print(model_name + " accuracy: ", model.score(X_test, y_test), end='\n\n')
+
+
+def blaze_sklearn():
+    X_train, y_train, num_classes = blazepose_preprocess_data(data_directory="dataset")
+    X_test, y_test, _ = blazepose_preprocess_data(data_directory="test_dataset/test1-different_clothes")
+    sk(KNeighborsClassifier(n_neighbors=10, weights='distance'), X_train, y_train, X_test, y_test, "knn")
+    sk(DecisionTreeClassifier(), X_train, y_train, X_test, y_test, "decision tree")
+    sk(RandomForestClassifier(), X_train, y_train, X_test, y_test, "random forest")
+    sk(MLPClassifier(solver='lbfgs'), X_train, y_train, X_test, y_test, "mlp")
+
+
 if __name__ == '__main__':
-    blazepose()
+    #blazepose()
+    blaze_sklearn()
