@@ -32,17 +32,15 @@ def pose_timer(camera, timer=5):
 
 
 def save_pose_data(camera, key, data_folder="dataset", count=0):
-    index = 0
-    while index < 100:
+    for index in range(300):
         status, frame = camera.read()
         frame = cv2.flip(frame, 1)
         cv2.imshow("preview", frame)
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # convert BGR to RGB
         frame = cv2.resize(frame, IMG_SIZE)  # resize to model if needed
-        #cv2.imwrite('dataset/'+key+'/img'+str(count)+'.png', frame)
+        # cv2.imwrite('dataset/'+key+'/img'+str(count)+'.png', frame)
         Image.fromarray(frame).save(data_folder+'/'+key+'/img'+str(index+count)+'.png')
         cv2.waitKey(1)
-        index = index + 1
 
 
 def collect_key_data(key, camera_port=0, data_folder="dataset", timer=5, count=0):
