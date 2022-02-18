@@ -9,7 +9,7 @@
   <p align="center">
     Playing video games with body poses
     <br />
-    <a href=""><strong>Demo video</strong></a>
+    <a href="#demo-video-playing-hades-with-our-poses"><strong>Demo video</strong></a>
     <br />
   </p>
 </div>
@@ -85,5 +85,7 @@ There are 3 steps in order to use Human Controller:
 3. Press play to start playing and let the app run in the background while your game runs.
 
 #### Demo video playing hades with our poses  
+![hades_intro_gif](https://user-images.githubusercontent.com/80704907/154738336-7d4aa904-3f71-43cc-b7b7-f2b467988a45.gif)
+
 
 <p align="right">(<a href="#top">back to top</a>)</p>
