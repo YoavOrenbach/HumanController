@@ -65,9 +65,9 @@ This is an example of how to list things you need to use the software and how to
    ```sh
    pip install requirements.txt
    ```
-3. Run gui++.py to use the app
+3. Run gui.py to use the app
    ```sh
-   python guii++.py
+   python gui.py
    ```
 
 <p align="right">(<a href="#top">back to top</a>)</p>
@@ -77,8 +77,6 @@ This is an example of how to list things you need to use the software and how to
 <!-- USAGE EXAMPLES -->
 ## Usage
 
--------------------Gui screenshot-------------------
-
 There are 3 steps in order to use Human Controller:
 1. Take poses you would like to use in game and map them to any keyboard or mouse input.
 2. Train a model to predict your poses (takes between 5-7 minutes).
@@ -86,6 +84,10 @@ There are 3 steps in order to use Human Controller:
 
 #### Demo video playing hades with our poses  
 ![hades_intro_gif](https://user-images.githubusercontent.com/80704907/154738336-7d4aa904-3f71-43cc-b7b7-f2b467988a45.gif)
+
+#### GUI:
+
+![gui_ver2_small](https://user-images.githubusercontent.com/80704907/156357246-df3913bf-a230-4fb2-9593-99f9f02d2fc8.png)
 
 
 <p align="right">(<a href="#top">back to top</a>)</p>
