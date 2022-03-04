@@ -9,7 +9,7 @@
   <p align="center">
     Playing video games with body poses
     <br />
-    <a href="#demo-video-playing-hades-with-our-poses"><strong>Demo video</strong></a>
+    <a href="https://youtu.be/v1qBOf-l7nQ"><strong>Demo video</strong></a>
     <br />
   </p>
 </div>
@@ -38,7 +38,7 @@
 <!-- ABOUT THE PROJECT -->
 ## About The Project
 
-The goal of this project is to allow dexterity challenged individuals who cannot operate a keyboard, mouse or any controller properly to play video games using body poses.
+The goal of this project is to to turn people into a game controller by playing games using body poses.
 You can choose any pose you like, map it to any keyboard or mouse input and play your favourite games with your desired poses at no extra cost.
 
 <p align="right">(<a href="#top">back to top</a>)</p>
@@ -47,11 +47,10 @@ You can choose any pose you like, map it to any keyboard or mouse input and play
 <!-- GETTING STARTED -->
 ## Getting Started
 
-No need for any extra hardware besides a video camera.
 
 ### Prerequisites
 
-This is an example of how to list things you need to use the software and how to install them.
+In order to use Human Controller you will need to have:
 * Working video camera
 * Video game (choose any game and the app simulates the keys)
 
@@ -82,10 +81,10 @@ There are 3 steps in order to use Human Controller:
 2. Train a model to predict your poses (takes between 5-7 minutes).
 3. Press play to start playing and let the app run in the background while your game runs.
 
-#### Demo video playing hades with our poses  
+#### Demo gif playing hades with our poses  
 ![hades_intro_gif](https://user-images.githubusercontent.com/80704907/154738336-7d4aa904-3f71-43cc-b7b7-f2b467988a45.gif)
 
-#### GUI:
+#### GUI example:
 
 ![gui_ver2_small](https://user-images.githubusercontent.com/80704907/156357246-df3913bf-a230-4fb2-9593-99f9f02d2fc8.png)
 
