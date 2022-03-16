@@ -199,9 +199,10 @@ def landmarks_to_embedding(landmarks_and_scores):
     landmarks = distance_embedding(landmarks)
 
     # Flatten the normalized landmark coordinates into a vector
-    embedding = tf.keras.layers.Flatten()(landmarks)
+    #embedding = tf.keras.layers.Flatten()(landmarks)
 
-    return embedding
+    #return embedding
+    return landmarks
 
 
 def init_crop_region(image_height, image_width):
@@ -372,3 +373,85 @@ def movenet_inference_video(movenet, image, crop_region, crop_size):
                                                       crop_region['width'] * image_width *
                                                       keypoints_with_scores[0, 0, idx, 1]) / image_width
     return keypoints_with_scores
+
+
+landmark_names = ['nose', 'left_eye', 'right_eye', 'left_ear', 'right_ear', 'left_shoulder', 'right_shoulder',
+                  'left_elbow', 'right_elbow', 'left_wrist', 'right_wrist', 'left_hip', 'right_hip',
+                  'left_knee', 'right_knee', 'left_ankle', 'right_ankle']
+
+
+def center_point(landmarks, left_bodypart, right_bodypart):
+    """Calculates pose center as point between hips."""
+    left = landmarks[landmark_names.index(left_bodypart)]
+    right = landmarks[landmark_names.index(right_bodypart)]
+    center = (left + right) * 0.5
+    return center
+
+
+def _get_pose_size(landmarks, torso_size_multiplier=2.5):
+    """Calculates pose size.
+
+    It is the maximum of two values:
+      * Torso size multiplied by `torso_size_multiplier`
+      * Maximum distance from pose center to any pose landmark
+    """
+    # Hips center
+    hips_center = center_point(landmarks, 'left_hip', 'right_hip')
+
+    # Shoulders center
+    shoulders_center = center_point(landmarks, 'left_shoulder', 'right_shoulder')
+
+    # Torso size as the minimum body size
+    torso_size = np.linalg.norm(shoulders_center - hips_center)
+
+    # Pose center
+    pose_center_new = center_point(landmarks, 'left_hip', 'right_hip')
+    max_dist = np.max(np.linalg.norm(landmarks - pose_center_new, axis=0))
+
+    # Normalize scale
+    pose_size = np.maximum(torso_size * torso_size_multiplier, max_dist)
+
+    return pose_size
+
+
+def normalize_landmarks(landmarks):
+    """Normalizes landmarks translation and scale."""
+    landmarks = np.copy(landmarks[:, :2])
+
+    # Move landmarks so that the pose center becomes (0,0)
+    pose_center = center_point(landmarks, 'left_hip', 'right_hip')
+    landmarks -= pose_center
+
+    # Scale the landmarks to a constant pose size
+    pose_size = _get_pose_size(landmarks)
+    landmarks /= pose_size
+
+    return landmarks
+
+
+def get_distances(landmarks, keypoint1, keypoint2):
+    landmark1 = landmarks[landmark_names.index(keypoint1)]
+    landmark2 = landmarks[landmark_names.index(keypoint2)]
+    return landmark2 - landmark1
+
+
+def _distance_embedding(landmarks):
+    relevant_landmarks = ['nose',
+                          'left_shoulder', 'right_shoulder',
+                          'left_elbow', 'right_elbow',
+                          'left_wrist', 'right_wrist',
+                          'left_hip', 'right_hip',
+                          'left_knee', 'right_knee',
+                          'left_ankle', 'right_ankle']
+    embedding_list = []
+    combinations_list = list(combinations(relevant_landmarks, 2))
+    for pair in combinations_list:
+        embedding_list.append(get_distances(landmarks, pair[0], pair[1]))
+    embedding = np.asarray(embedding_list)
+    return embedding
+
+
+def feature_engineering(landmarks):
+    landmarks = normalize_landmarks(landmarks.reshape((17, 3)))
+    embedding = _distance_embedding(landmarks)
+    return embedding

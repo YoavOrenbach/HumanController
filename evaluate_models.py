@@ -12,16 +12,18 @@ from train_model import preprocess_data
 from cv2 import cv2
 from mediapipe.python.solutions import pose as mp_pose
 from blazepose_utils import FullBodyPoseEmbedder
-from movenet_utils import load_movenet_model, movenet_inference_video, init_crop_region, determine_crop_region
+from movenet_utils import load_movenet_model, movenet_inference_video, init_crop_region, determine_crop_region, feature_engineering
 import re
 from tqdm import tqdm
+from test_analysis import test1_pose_switches, test1_movements, test2_pose_switches, test2_movements
+import joblib
 
 IMG_SIZE = (160, 160)
 
 
 def evaluate_model(model_name, preprocess_data):
     results_dic = {}
-    model = tf.keras.models.load_model(model_name + "_saved_model")
+    model = tf.keras.models.load_model("saved_models/"+model_name)
     test_data = os.listdir("test_dataset")
     for test_folder in test_data:
         test_folder_path = os.path.join("test_dataset", test_folder)
@@ -101,34 +103,17 @@ def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix'
 
     sns.set(style="white")
     plt.subplots(figsize=(10, 10))
-    heatmap = sns.heatmap(cm, cmap=cmap, center=0, square=True, linewidths=.5, annot=True)
+    heatmap = sns.heatmap(cm, cmap=cmap, center=0, square=True, linewidths=.5, annot=True, fmt='d')
     heatmap.set_title(title)
     heatmap.xaxis.set_ticklabels(classes, rotation='vertical')
     heatmap.yaxis.set_ticklabels(classes, rotation='horizontal')
     heatmap.set_xlabel('Predicted label')
     heatmap.set_ylabel('True label')
-    """
-    plt.imshow(cm, interpolation='nearest', cmap=cmap)
-    plt.title(title)
-    plt.colorbar()
-    tick_marks = np.arange(len(classes))
-    plt.xticks(tick_marks, classes, rotation=55)
-    plt.yticks(tick_marks, classes)
-    fmt = '.2f' if normalize else 'd'
-    thresh = cm.max() / 2.
-    for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-        plt.text(j, i, format(cm[i, j], fmt),
-                 horizontalalignment="center",
-                 color="white" if cm[i, j] > thresh else "black")
-    plt.ylabel('True label')
-    plt.xlabel('Predicted label')
-    plt.tight_layout()
-    """
     plt.show()
 
 
 def model_confusion_matrix(model_name, preprocess_data, test_folder):
-    model = tf.keras.models.load_model(model_name + "_saved_model")
+    model = tf.keras.models.load_model("saved_models/"+model_name)
     class_names = os.listdir(test_folder)
     # Classify pose in the TEST dataset using the trained model
     X_test, y_test, _ = preprocess_data(data_directory=test_folder)
@@ -147,91 +132,22 @@ def model_confusion_matrix(model_name, preprocess_data, test_folder):
                                                               y_pred_label))
 
 
-def analyze_movements(img_num):
-    class_num = 0
-    if 0 <= img_num <= 8:
-        class_num = 12
-    elif 9 <= img_num <= 20:
-        class_num = 22
-    elif 21 <= img_num <= 38:
-        class_num = 23
-    elif 39 <= img_num <= 55:
-        class_num = 2
-    elif 56 <= img_num <= 68:
-        class_num = 1
-    elif 69 <= img_num <= 76:
-        class_num = 12
-    elif 77 <= img_num <= 86:
-        class_num = 11
-    elif 87 <= img_num <= 99:
-        class_num = 9
-    elif 100 <= img_num <= 106:
-        class_num = 12
-    elif 107 <= img_num <= 121:
-        class_num = 21
-    elif 122 <= img_num <= 130:
-        class_num = 19
-    elif 131 <= img_num <= 138:
-        class_num = 12
-    elif 139 <= img_num <= 159:
-        class_num = 7
-    elif 160 <= img_num <= 182:
-        class_num = 8
-    elif 183 <= img_num <= 186:
-        class_num = 12
-    elif 187 <= img_num <= 211:
-        class_num = 6
-    elif 212 <= img_num <= 214:
-        class_num = 12
-    elif 215 <= img_num <= 233:
-        class_num = 5
-    elif 234 <= img_num <= 242:
-        class_num = 12
-    elif 243 <= img_num <= 262:
-        class_num = 18
-    elif 263 <= img_num <= 279:
-        class_num = 15
-    elif 280 <= img_num <= 294:
-        class_num = 16
-    elif 295 <= img_num <= 297:
-        class_num = 18
-    elif 298 <= img_num <= 304:
-        class_num = 12
-    elif 305 <= img_num <= 318:
-        class_num = 17
-    elif 319 <= img_num <= 326:
-        class_num = 12
-    elif 327 <= img_num <= 344:
-        class_num = 14
-    elif 345 <= img_num <= 346:
-        class_num = 24
-    elif 347 <= img_num <= 364:
-        class_num = 3
-    elif 365 <= img_num <= 375:
-        class_num = 12
-    elif 375 <= img_num <= 407:
-        class_num = 13
-    return class_num
-
-
-def evaluate_ultimate_model(model_name, threshold):
-    model = tf.keras.models.load_model(model_name + "_saved_model")
+def evaluate_model_threshold(model_name, threshold, test_dir, test_movements, test_pose_switches):
+    #model = tf.keras.models.load_model("saved_models/"+model_name)
+    model = joblib.load(f'saved_models/{model_name}_knn.joblib')
     true_positive, true_negative, false_positive, false_negative = 0, 0, 0, 0
-    negative_images = [7,8,9,20,21,22,38,39,55,56,57,68,69,75,76,77,87,99,100,105,106,107,122,131,132,138,139,159,160,
-                       183,187,188,211,212,213,214,215,233,234,235,236,241,242,243,260,261,262,263,264,265,266,277,278,
-                       279,280,281,294,295,296,297,298,304,305,306,316,317,318,319,320,321,325,326,327,344,345,346,347,
-                       348,364,365,374,375,376,377,378,379,380,381,382,383,384,385,386,387,388,389]
     if model_name == "blazepose":
         pose_embedder = FullBodyPoseEmbedder()
         pose_tracker = mp_pose.Pose()
     else:
         movenet, input_size = load_movenet_model("movenet_thunder")
         crop_region = init_crop_region(256, 256)
-    test_dir = "test_ultimate/all_keys"
-    pose_images = os.listdir(test_dir)
-    for pose_image in tqdm(pose_images):
-        img_num = int(re.search(r'\d+', pose_image)[0])
-        class_num = analyze_movements(img_num)
+    predictions_lst = [-1, -1]
+    #pose_images = os.listdir(test_dir)
+    pose_images = ['img'+str(i)+'.png' for i in range(len(os.listdir(test_dir)))]
+    for img_num, pose_image in enumerate(tqdm(pose_images)):
+        #img_num = int(re.search(r'\d+', pose_image)[0])
+        class_num = test_movements(img_num)
         image = cv2.imread(os.path.join(test_dir, pose_image))
         image_height, image_width, _ = image.shape
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -247,16 +163,22 @@ def evaluate_ultimate_model(model_name, threshold):
             model_input = movenet_inference_video(movenet, image, crop_region, crop_size=[input_size, input_size])
             crop_region = determine_crop_region(model_input, image_height, image_width)
             model_input[0][0][:, :2] *= image_height
+            model_input = feature_engineering(model_input)
         predict_frame = np.expand_dims(model_input, axis=0)
-        prediction = model.predict(predict_frame)
+        #prediction = model(predict_frame, training=False)
+        prediction = model.predict_proba(model_input.reshape(1,-1))
         predicted_class = np.argmax(prediction)
-        if np.max(prediction) > threshold:
+
+        predictions_lst.pop(0)
+        predictions_lst.append(predicted_class)
+
+        if np.max(prediction) > threshold and predictions_lst.count(predictions_lst[0]) == len(predictions_lst):
             if predicted_class == class_num:
                 true_positive += 1
             else:
                 false_positive += 1
         else:
-            if img_num in negative_images:
+            if img_num in test_pose_switches:
                 true_negative += 1
             else:
                 false_negative += 1
@@ -277,11 +199,12 @@ def evaluate_ultimate_model(model_name, threshold):
     return accuracy, precision, recall, F1_score
 
 
-def plot_ultimate_model(model_name):
+def plot_model_metrics(model_name, test_dir, test_movements, test_pose_switches):
     accuracy_list, precision_list, recall_list, F1_list = [], [], [], []
     thresholds = [0.6, 0.7, 0.8, 0.90, 0.99]  # 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98,
     for threshold in thresholds:
-        accuracy, precision, recall, F1_score = evaluate_ultimate_model(model_name, threshold)
+        accuracy, precision, recall, F1_score = evaluate_model_threshold(model_name, threshold, test_dir,
+                                                                         test_movements, test_pose_switches)
         accuracy_list.append(accuracy)
         precision_list.append(precision)
         recall_list.append(recall)
@@ -299,14 +222,30 @@ def plot_ultimate_model(model_name):
     plt.show()
 
 
+def evaluate_machine_learning(model_name, preprocess_data):
+    results_dic = {}
+    model = joblib.load(f'saved_models/{model_name}_knn.joblib')
+    test_data = os.listdir("test_dataset")
+    for test_folder in test_data:
+        test_folder_path = os.path.join("test_dataset", test_folder)
+        X, y, _ = preprocess_data(data_directory=test_folder_path)
+        accuracy = model.score(X, y)
+        results_dic[test_folder[:5]] = accuracy * 100
+        print(accuracy)
+    return results_dic
+
+
 if __name__ == '__main__':
     # individual bar plots:
 
     #movenet_dic = evaluate_model("movenet", movenet_preprocess_data)
     #results_bar_plot("movenet", movenet_dic)
-    blazepose_dic = evaluate_model("blazepose", blazepose_preprocess_data)
-    results_bar_plot("blazepose", blazepose_dic)
-
+    #blazepose_dic = evaluate_model("blazepose", blazepose_preprocess_data)
+    #results_bar_plot("blazepose+mlp", blazepose_dic)
+    #movenet_dic = evaluate_machine_learning("movenet", movenet_preprocess_data)
+    #results_bar_plot("movenet+KNN", movenet_dic)
+    #blazepose_dic = evaluate_machine_learning('blazepose', blazepose_preprocess_data)
+    #results_bar_plot("blazepose+KNN", blazepose_dic)
 
     # all models bar plot:
     """
@@ -320,12 +259,12 @@ if __name__ == '__main__':
 
     # confusion matrix:
     """
-    model_confusion_matrix("movenet", movenet_preprocess_data, "test_dataset/test7-ultimate")
+    model_confusion_matrix("movenet", movenet_preprocess_data, "test_dataset/test3-diff_back_diff_lighting")
     model_confusion_matrix("blazepose", blazepose_preprocess_data, "test_dataset/test7-ultimate")
     """
 
     # ultimate test:
-    #evaluate_ultimate_model("movenet", 0.95)
-    #evaluate_ultimate_model("blazepose", 0.95)
-    #plot_ultimate_model("movenet")
-    #plot_ultimate_model("blazepose")
+    #evaluate_model_threshold("movenet", 0.95, "test_video/test2-long", test2_movements, test2_pose_switches)
+    #evaluate_model_threshold("blazepose", 0.95, "test_video/test2-long", test2_movements, test2_pose_switches)
+    #plot_model_metrics("movenet", "test_video/test1-ultimate", test1_movements, test1_pose_switches)
+    #plot_model_metrics("blazepose", "test_video/test1-ultimate", test1_movements, test1_pose_switches)

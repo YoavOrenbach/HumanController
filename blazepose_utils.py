@@ -54,7 +54,7 @@ class FullBodyPoseEmbedder(object):
         # Get embedding.
         #embedding = self._get_pose_distance_embedding(embedding)
         embedding = self._distance_embedding(embedding)
-        #embedding = self._angle_embedding2(embedding)
+        #embedding = self._angle_embedding(embedding)
 
         return embedding[:, :2]
 
@@ -104,9 +104,13 @@ class FullBodyPoseEmbedder(object):
 
         # Max dist to pose center.
         pose_center = self._get_pose_center(landmarks)
-        max_dist = np.max(np.linalg.norm(landmarks - pose_center, axis=1))
+        #max_dist = np.max(np.linalg.norm(landmarks - pose_center, axis=1))
 
-        return max(torso_size * torso_size_multiplier, max_dist)
+        #return max(torso_size * torso_size_multiplier, max_dist)
+
+        max_dist = np.max(np.linalg.norm(landmarks - pose_center, axis=0))
+        pose_size = np.maximum(torso_size * torso_size_multiplier, max_dist)
+        return pose_size
 
     def _get_pose_distance_embedding(self, landmarks):
         """Converts pose landmarks into 3D embedding.
