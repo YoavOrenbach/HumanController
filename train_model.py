@@ -1,12 +1,15 @@
 import tensorflow as tf
+from keras.layers.merge import concatenate
 import numpy as np
+from sklearn.model_selection import train_test_split
 import os
-from movenet_utils import load_movenet_model, landmarks_to_embedding
-from movenet_utils import movenet_inference_video, init_crop_region, determine_crop_region
+from pose_estimation_utils import load_movenet_model, feature_engineering
+from pose_estimation_utils import movenet_inference_video, init_crop_region, determine_crop_region
 from tqdm import tqdm
 
 LEARNING_RATE = 0.001
 IMG_SIZE = (256, 256)
+ENSEMBLE_SIZE = 5
 
 
 def preprocess_data(data_directory):
@@ -27,7 +30,8 @@ def preprocess_data(data_directory):
             landmarks = movenet_inference_video(movenet, image, crop_region, crop_size=[input_size, input_size])
             crop_region = determine_crop_region(landmarks, image_height, image_width)
             landmarks[0][0][:, :2] *= image_height
-            landmarks_list.append(landmarks)
+            embedding = feature_engineering(landmarks)
+            landmarks_list.append(embedding)
             label_list.append(class_num)
         class_num = class_num + 1
 
@@ -37,34 +41,61 @@ def preprocess_data(data_directory):
     return landmarks_array, categorical_labels, class_num
 
 
-def define_model(num_classes):
-    inputs = tf.keras.Input(shape=(1, 1, 17, 3))
-    embedding = landmarks_to_embedding(inputs)
-    layer = tf.keras.layers.Dense(256, activation='relu')(embedding)
+def define_model(num_classes, initializer="glorot_uniform"):
+    inputs = tf.keras.Input(shape=(78, 2))
+    flatten = tf.keras.layers.Flatten()(inputs)
+    layer = tf.keras.layers.Dense(128, activation='relu', kernel_initializer=initializer)(flatten)
     layer = tf.keras.layers.Dropout(0.5)(layer)
-    layer = tf.keras.layers.Dense(128, activation='relu')(layer)
-    layer = tf.keras.layers.Dropout(0.5)(layer)
-    layer = tf.keras.layers.Dense(64, activation='relu')(layer)
+    layer = tf.keras.layers.Dense(64, activation='relu', kernel_initializer=initializer)(layer)
     layer = tf.keras.layers.Dropout(0.5)(layer)
     outputs = tf.keras.layers.Dense(num_classes, activation="softmax")(layer)
     model = tf.keras.Model(inputs, outputs)
     return model
 
 
-def train(model, X_train, y_train):
-    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=LEARNING_RATE),
+def train_model(model, X_train, X_val, y_train, y_val, optimizer="Adam", patience=40):
+    model.compile(optimizer=optimizer,
                   loss='categorical_crossentropy',
                   metrics=['accuracy'])
+    earlystopping = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=patience)
     model.fit(X_train, y_train,
               epochs=50,
-              batch_size=32)
+              batch_size=32,
+              validation_data=(X_val, y_val),
+              callbacks=[earlystopping])
+
+
+def define_stacked_model(members, num_classes):
+    for i in range(len(members)):
+        model = members[i]
+        for layer in model.layers:
+            layer.trainable = False
+            layer._name = 'ensemble_' + str(i+1) + '_' + layer.name
+    ensemble_visible = [model.input for model in members]
+    ensemble_outputs = [model.output for model in members]
+    merge = concatenate(ensemble_outputs)
+    hidden = tf.keras.layers.Dense(64, activation='relu', kernel_initializer=tf.keras.initializers.HeNormal())(merge)
+    output = tf.keras.layers.Dense(num_classes, activation='softmax')(hidden)
+    model = tf.keras.Model(inputs=ensemble_visible, outputs=output)
+    return model
 
 
 def controller_model(data_directory, model_directory):
     X, y, num_classes = preprocess_data(data_directory)
-    model = define_model(num_classes)
-    train(model, X, y)
-    model.save(model_directory)
+    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1)
+    sub_models = []
+
+    for i in range(ENSEMBLE_SIZE):
+        model = define_model(num_classes, initializer=tf.keras.initializers.HeNormal())
+        train_model(model, X_train, X_val, y_train, y_val, optimizer="Nadam")
+        model.save(model_directory+"/model_"+str(i+1))
+        sub_models.append(model)
+
+    meta_learner = define_stacked_model(sub_models, num_classes)
+    ensemble_X_train = [X_train for _ in range(ENSEMBLE_SIZE)]
+    ensemble_X_val = [X_val for _ in range(ENSEMBLE_SIZE)]
+    train_model(meta_learner, ensemble_X_train, ensemble_X_val, y_train, y_val, patience=10)
+    meta_learner.save(model_directory+"/ensemble")
 
 
 if __name__ == '__main__':

@@ -11,7 +11,7 @@ import shutil
 import re
 from create_dataset import collect_key_data, create_data_folder
 from train_model import controller_model
-from predict_and_play import print_poses
+from predict_and_play import pose_and_play, pose_and_print
 
 
 KEYS = [
@@ -28,7 +28,7 @@ KEYS = [
             ({'side':'top','expand':'yes','fill':'both'}),
             [
                 # list of Keys
-                ('esc'," ", 'F1', 'F2','F3','F4'," ",'F5','F6','F7','F8'," ",'F9','F10','F11','F12')
+                ('Esc'," ", 'F1', 'F2','F3','F4'," ",'F5','F6','F7','F8'," ",'F9','F10','F11','F12')
             ]
         ],
 
@@ -40,7 +40,7 @@ KEYS = [
                 ('Tab','Q','W','E','R','T','Y','U','I','O','P','[',']','\\'),
                 ('CapsLock','A','S','D','F','G','H','J','K','L',';',"'","\tEnter"),
                 ("Shift\t",'Z','X','C','V','B','N','M',',','.','/',"\tshift"),
-                ("Ctrl", "Win",'Alt','\t\t\tSpace\t\t\t','alt','win','menu','ctrl')
+                ("Ctrl", "Win",'Alt','\t\tSpace\t\t','alt','win','menu','ctrl')
             ]
         ]
     ],
@@ -114,7 +114,7 @@ switcher = {
     'Ctrl': 'LCtrl',
     'ctrl': 'RCtrl',
     'Win': 'LWin',
-    'win': 'Rwin',
+    'win': 'RWin',
     'Alt': 'LAlt',
     'alt': 'RAlt',
     '/\n': 'Divide',
@@ -155,6 +155,8 @@ class Controller:
         self.tree = None
         self.timer = tk.IntVar()
         self.timer.set(5)
+        self.queue_frames = tk.IntVar()
+        self.queue_frames.set(5)
         self.images = []
         self.selected_keys = []
         self.dataset_path = "datasets/dataset" + str(tab_id)
@@ -320,6 +322,9 @@ class Controller:
             f.writelines(data)
 
     def delete_pose(self, pose, pose_dir):
+        ans = mb.askyesno("Train Question", "Are you sure you want to delete pose "+str(pose.id))
+        if not ans:
+            return
         if check_pose_directory(pose_dir):
             self.remove_pose_data(pose, pose_dir)
         for i in range(pose.id, len(self.poses)):
@@ -615,14 +620,34 @@ class Controller:
                 f.writelines(data)
 
     def play(self):
-        play_msg = "Press Play to start playing games with your poses." \
-                   "\nPlease have your game ready and have fun!"
+        play_msg = "Press Play to start playing games with your poses, or press test " \
+                   "to see model predictions."
         play_lbl = ttk.Label(self.play_frame, text=play_msg)
         play_lbl.pack(anchor='w', padx=10, pady=5)
-        play_button = ttk.Button(self.play_frame, text="Play", command=self.play_popup)
-        play_button.pack(pady=5)
 
-    def play_popup(self):
+        button_frame = ttk.Frame(self.play_frame)
+        button_frame.pack(padx=10, pady=5)
+        play_button = ttk.Button(button_frame, text="Play", command=self.play_popup)
+        play_button.pack(side=tk.LEFT, expand=True, padx=10)
+        test_button = ttk.Button(button_frame, text="Test", command=lambda: self.play_popup(print_flag=True))
+        test_button.pack(side=tk.LEFT, expand=True, padx=10)
+
+        queue_frame = ttk.Frame(self.play_frame)
+        queue_frame.pack(fill=tk.X, pady=5)
+        ttk.Label(queue_frame, text="Adjust number of frames per pose:").pack(side=tk.LEFT, anchor='w', padx=10)
+        vcmd = (queue_frame.register(lambda new_value: new_value.isdigit()), '%P')
+        spin = ttk.Spinbox(queue_frame, from_=0, to=20, width=10, textvariable=self.queue_frames,
+                           validate="key", validatecommand=vcmd, bootstyle=SECONDARY)
+        spin.pack(side=tk.LEFT, padx=10)
+
+        queue_msg = "You can adjust the minimum number of frames when taking a pose before predicting." \
+                    "\nIf you make a pose and no key is pressed, try decreasing the number." \
+                    "\nIf a key is pressed when you don't intend to make a pose, try increasing the number."
+        info_button = ttk.Button(queue_frame, text="More Info", bootstyle=SECONDARY)
+        info_button['command'] = lambda: mb.showinfo("Pose Frames", queue_msg)
+        info_button.pack(side=tk.LEFT, padx=10)
+
+    def play_popup(self, print_flag=False):
         train_flag, keys_flag = False, False
         train_msg = "Model is not trained.\nPlease train the model before playing."
         keys_msg = "Some poses don't have keys yet.\nPlease choose a key for every pose so they can be pressed."
@@ -636,10 +661,14 @@ class Controller:
         elif keys_flag:
             mb.showerror("Play Error", keys_msg)
         else:
-            mb.showinfo("Playing", "Keys will now be pressed according to your poses")
             camera_port = int(self.webcam_variable.get()[-1])
             try:
-                print_poses(self.log_path, self.model_path, "movenet", camera_port)
+                if not print_flag:
+                    mb.showinfo("Playing", "Keys will now be pressed according to your poses")
+                    pose_and_play(self.log_path, self.model_path, camera_port, self.queue_frames.get())
+                else:
+                    mb.showinfo("Testing", "Pose names will be printed according to your poses")
+                    pose_and_print(self.log_path, self.model_path, camera_port, self.queue_frames.get())
             except cv2.error as e:
                 mb.showerror("Webcam Error", "Webcam is not set properly")
 
@@ -787,6 +816,9 @@ class HumanControllerApp:
             f.writelines(data)
 
     def delete_controller(self, tab):
+        ans = mb.askyesno("Train Question", "Are you sure you want to delete controller "+str(tab.id))
+        if not ans:
+            return
         self.notebook.forget(tab.frame)
         self.tabs.remove(tab)
         if os.path.isdir("datasets/dataset"+str(tab.id)):
