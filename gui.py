@@ -155,6 +155,7 @@ class Controller:
         self.tree = None
         self.timer = tk.IntVar()
         self.timer.set(5)
+        self.movenet_model = tk.StringVar()
         self.queue_frames = tk.IntVar()
         self.queue_frames.set(5)
         self.images = []
@@ -620,11 +621,20 @@ class Controller:
                 f.writelines(data)
 
     def play(self):
+        model_msg = "You can choose between a more accurate model and a faster model"
+        ttk.Label(self.play_frame, text=model_msg).pack(anchor='w', padx=10, pady=5)
+        radio_frame = ttk.Frame(self.play_frame)
+        radio_frame.pack(padx=10, pady=5)
+        thunder_button = ttk.Radiobutton(radio_frame, text="Accurate model", value="thunder", variable=self.movenet_model)
+        thunder_button.pack(side=tk.LEFT, expand=True, padx=10)
+        lightning_button = ttk.Radiobutton(radio_frame, text="Fast model", value="lightning",  variable=self.movenet_model)
+        lightning_button.pack(side=tk.LEFT, expand=True, padx=10)
+        self.movenet_model.set("thunder")
+
         play_msg = "Press Play to start playing games with your poses, or press test " \
                    "to see model predictions."
         play_lbl = ttk.Label(self.play_frame, text=play_msg)
         play_lbl.pack(anchor='w', padx=10, pady=5)
-
         button_frame = ttk.Frame(self.play_frame)
         button_frame.pack(padx=10, pady=5)
         play_button = ttk.Button(button_frame, text="Play", command=self.play_popup)
@@ -665,10 +675,10 @@ class Controller:
             try:
                 if not print_flag:
                     mb.showinfo("Playing", "Keys will now be pressed according to your poses")
-                    pose_and_play(self.log_path, self.model_path, camera_port, self.queue_frames.get())
+                    pose_and_play(self.log_path, self.model_path, camera_port, self.queue_frames.get(), self.movenet_model.get())
                 else:
                     mb.showinfo("Testing", "Pose names will be printed according to your poses")
-                    pose_and_print(self.log_path, self.model_path, camera_port, self.queue_frames.get())
+                    pose_and_print(self.log_path, self.model_path, camera_port, self.queue_frames.get(), self.movenet_model.get())
             except cv2.error as e:
                 mb.showerror("Webcam Error", "Webcam is not set properly")
 
@@ -706,7 +716,7 @@ class HumanControllerApp:
         #ttk.Style("darkly")
         width, height = self.root.winfo_screenwidth(), self.root.winfo_screenheight()
         if width == 3840 and height == 2160:  # 4k
-            self.root.geometry('%dx%d+0+0' % (width*0.35, height*0.51))
+            self.root.geometry('%dx%d+0+0' % (width*0.35, height*0.56))
         elif width == 1920 and height == 1080:  # 1080p
             self.root.geometry('%dx%d+0+0' % (width*0.59, height*0.86))
         self.root.title("Human Controller GUI")

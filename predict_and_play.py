@@ -124,10 +124,10 @@ def predict_poses(class_names, model, movenet, input_size, crop_region, camera, 
     return num_frames
 
 
-def pose_and_play(log_path, model_path, camera_port=0, queue_size=5):
+def pose_and_play(log_path, model_path, camera_port=0, queue_size=5, movenet_model="thunder"):
     class_names = find_class_names(log_path)
     model = tf.keras.models.load_model(model_path+"/ensemble")
-    movenet, input_size = load_movenet_model("movenet_thunder")
+    movenet, input_size = load_movenet_model("movenet_"+movenet_model)
     crop_region = init_crop_region(IMG_SIZE[0], IMG_SIZE[1])
     camera = cv2.VideoCapture(camera_port)
     start = time.time()
@@ -149,11 +149,11 @@ def find_pose_names(log_path):
     return class_names
 
 
-def pose_and_print(log_path, model_path, camera_port=0, queue_size=5):
+def pose_and_print(log_path, model_path, camera_port=0, queue_size=5, movenet_model="thunder"):
     model = tf.keras.models.load_model(model_path+"/ensemble")
     class_names = find_pose_names(log_path)
     image_height, image_width = IMG_SIZE[0], IMG_SIZE[1]
-    movenet, input_size = load_movenet_model("movenet_thunder")
+    movenet, input_size = load_movenet_model("movenet_"+movenet_model)
     crop_region = init_crop_region(image_height, image_width)
     predictions_lst = [-1] * queue_size
     camera = cv2.VideoCapture(camera_port)
@@ -193,5 +193,5 @@ def pose_and_print(log_path, model_path, camera_port=0, queue_size=5):
 
 
 if __name__ == '__main__':
-    pose_and_print("logs/log1.txt", "saved_models/model1", camera_port=1, queue_size=5)
-    #pose_and_play("logs/log1.txt", "saved_models/model1", camera_port=1)
+    pose_and_print("logs/log2.txt", "saved_models/model2", camera_port=1, queue_size=5, movenet_model="thunder")
+    #pose_and_play("logs/log2.txt", "saved_models/model2", camera_port=1, queue_size=5, movenet_model="thunder")
