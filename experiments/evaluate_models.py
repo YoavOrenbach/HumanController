@@ -1,5 +1,6 @@
 import tensorflow as tf
 import numpy as np
+import pandas as pd
 import os
 import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
@@ -40,6 +41,7 @@ def evaluate_model(model_name, pose_estimation_model, preprocess_data, test_dir=
         model = joblib.load(f'saved_models/{model_name}.joblib')
     results_dic = {}
     test_data = os.listdir(test_dir)
+    test_data = test_data[:1]+test_data[3:]+test_data[1:3]
     if preprocessing:
         for i, test_folder in enumerate(test_data):
             test_folder_path = os.path.join(test_dir, test_folder)
@@ -48,6 +50,7 @@ def evaluate_model(model_name, pose_estimation_model, preprocess_data, test_dir=
                 np.save(f"preprocessing/{pose_estimation_model}_X_test{i+1}.npy", X)
                 np.save(f"preprocessing/{pose_estimation_model}_y_test{i+1}.npy", y)
                 if not ml_model:
+                    X = [X for _ in range(ENSEMBLE_MODELS)]
                     loss, accuracy = model.evaluate(X, y)
                 else:
                     accuracy = model.score(X, y)
@@ -57,7 +60,7 @@ def evaluate_model(model_name, pose_estimation_model, preprocess_data, test_dir=
                 AUTOTUNE = tf.data.AUTOTUNE
                 test_dataset = test_dataset.prefetch(buffer_size=AUTOTUNE)
                 loss, accuracy = model.evaluate(test_dataset)
-            results_dic[test_folder[:5]] = accuracy * 100
+            results_dic['test '+str(i+1)] = accuracy * 100
     else:
         for i, test_folder in enumerate(test_data):
             X = np.load(f"preprocessing/{pose_estimation_model}_X_test{i+1}.npy")
@@ -66,10 +69,9 @@ def evaluate_model(model_name, pose_estimation_model, preprocess_data, test_dir=
                 X = [X for _ in range(ENSEMBLE_MODELS)]
                 loss, accuracy = model.evaluate(X, y)
             else:
-                X = X.reshape()
                 accuracy = model.score(X, y)
                 print(accuracy)
-            results_dic[test_folder[:5]] = accuracy * 100
+            results_dic['test '+str(i+1)] = accuracy * 100
     return results_dic
 
 
@@ -90,7 +92,7 @@ def results_bar_plot(model_name, results_dic):
     plt.show()
 
 
-def models_bar_plot(vals1, vals2, vals3, vals4):
+def models_bar_plot(vals1, vals2, vals3, vals4, labels, title, xlabel, ylabel, xticks, bbox):
     # set width of bar
     bar_width = 0.2
     fig = plt.subplots(figsize=(13, 8))
@@ -102,29 +104,46 @@ def models_bar_plot(vals1, vals2, vals3, vals4):
     br4 = [x + bar_width for x in br3]
 
     # Make the plot
-    plt.bar(br1, vals1, color='darkorange', width=bar_width, edgecolor='grey', label='MobileNet')
+    plt.bar(br1, vals1, color='darkorange', width=bar_width, edgecolor='grey', label=labels[0])
     for i in range(len(vals1)):
-        plt.text(i, vals1[i], "{:.1f}".format(vals1[i]), ha='center')
-    plt.bar(br2, vals2, color='royalblue', width=bar_width, edgecolor='grey', label='MoveNet')
+        plt.text(i, vals1[i], "{:.2f}".format(vals1[i]), ha='center')
+    plt.bar(br2, vals2, color='royalblue', width=bar_width, edgecolor='grey', label=labels[1])
     for i in range(len(vals2)):
-        plt.text(i+0.2, vals2[i], "{:.1f}".format(vals2[i]), ha='center')
-    plt.bar(br3, vals3, color='firebrick', width=bar_width, edgecolor='grey', label='BlazePose')
+        plt.text(i+0.2, vals2[i], "{:.2f}".format(vals2[i]), ha='center')
+    plt.bar(br3, vals3, color='firebrick', width=bar_width, edgecolor='grey', label=labels[2])
     for i in range(len(vals3)):
-        plt.text(i+0.4, vals3[i], "{:.1f}".format(vals3[i]), ha='center')
-    plt.bar(br4, vals4, color='springgreen', width=bar_width, edgecolor='grey', label='EfficientPose')
+        plt.text(i+0.4, vals3[i], "{:.2f}".format(vals3[i]), ha='center')
+    plt.bar(br4, vals4, color='springgreen', width=bar_width, edgecolor='grey', label=labels[3])
     for i in range(len(vals4)):
-        plt.text(i+0.6, vals4[i], "{:.1f}".format(vals4[i]), ha='center')
+        plt.text(i+0.6, vals4[i], "{:.2f}".format(vals4[i]), ha='center')
 
     # Adding Xticks
-    plt.xlabel('Tests', fontweight='bold', fontsize = 15)
-    plt.ylabel('Accuracy', fontweight='bold', fontsize=15)
-    plt.xticks([r + bar_width for r in range(len(vals1))],
-               ['test 1\nsame background\ndifferent clothes', 'test 2\ndifferent background\nsame lighting',
-                'test 3\ndifferent background\ndifferent lighting', 'test 4\noutside',
-                'test 5\nbad lighting', 'test 6\n different perspective'])
+    plt.title(title, fontweight='bold', fontsize=15)
+    plt.xlabel(xlabel, fontweight='bold', fontsize=15)
+    plt.ylabel(ylabel, fontweight='bold', fontsize=15)
+    plt.xticks([(r + bar_width*2) - (bar_width)/2 for r in range(len(vals1))], xticks)
 
-    plt.legend(bbox_to_anchor=(1.1,1.05))
+    plt.legend(bbox_to_anchor=bbox)
     plt.show()
+
+
+def pose_estimation_bars():
+    mobilenet_dic = evaluate_model("mobilenet", "mobilenet", None, pose_estimation=False)
+    movenet_dic = evaluate_model("movenet", "movenet", movenet_preprocess_data)
+    blazepose_dic = evaluate_model("blazepose", "blazepose", blazepose_preprocess_data)
+    efficientpose_dic = evaluate_model("efficientpose", "efficientpose", efficientpose_preprocess_data)
+
+    labels = ['MobileNet', 'MoveNet', 'BlazePose', 'EfficientPose']
+    title = 'Pose estimation models accuracy on prepared test sets'
+    ylabel = 'Accuracy'
+    xlabel = 'Tests'
+    xticks = ['test 1\nsame background\ndifferent clothes', 'test 2\ndifferent background\nsame lighting',
+              'test 3\ndifferent background\ndifferent lighting', 'test 4\noutside',
+              'test 5\nbad lighting', 'test 6\n different perspective']
+    bbox = (1.1, 1.05)
+    models_bar_plot(list(mobilenet_dic.values()), list(movenet_dic.values()),
+                    list(blazepose_dic.values()), list(efficientpose_dic.values()),
+                    labels, title, xlabel, ylabel, xticks, bbox)
 
 
 def plot_confusion_matrix(cm, classes, normalize=False, title='Confusion matrix', cmap=plt.cm.Blues):
@@ -234,14 +253,14 @@ def calculate_metrics(model, model_input, predictions_lst, threshold, test_movem
     return true_positive, true_negative, false_positive, false_negative
 
 
-def evaluate_model_threshold(model_name, pose_estimation_model, threshold, test_dir, test_movements, test_pose_switches,
-                             ml_model=False, preprocessing=True, preprocess_name="video2"):
+def evaluate_model_threshold(model_name, pose_estimation_model, threshold, queue_size, test_dir, test_movements,
+                             test_pose_switches, ml_model=False, preprocessing=True, preprocess_name="video2"):
     if not ml_model:
         model = tf.keras.models.load_model("saved_models/"+model_name)
     else:
         model = joblib.load(f'saved_models/{model_name}.joblib')
     true_positive, true_negative, false_positive, false_negative = 0, 0, 0, 0
-    predictions_lst = [-1] * 4
+    predictions_lst = [-1] * queue_size
 
     if preprocessing:
         true_positive, true_negative, false_positive, false_negative = \
@@ -273,9 +292,10 @@ def plot_model_metrics(model_name, pose_estimation_model, test_dir, test_movemen
                        ml_model=False, preprocessing=True, preprocess_name="video2"):
     accuracy_list, precision_list, recall_list, F1_list = [], [], [], []
     thresholds = [0.5, 0.6, 0.7, 0.8, 0.9, 0.99]  # 0.91, 0.92, 0.93, 0.94, 0.95, 0.96, 0.97, 0.98,
+    queue_size = 4 if preprocess_name == "video2" else 2
     for threshold in thresholds:
         accuracy, precision, recall, F1_score = \
-            evaluate_model_threshold(model_name, pose_estimation_model, threshold, test_dir, test_movements,
+            evaluate_model_threshold(model_name, pose_estimation_model, threshold, queue_size, test_dir, test_movements,
                                      test_pose_switches, ml_model, preprocessing, preprocess_name)
         accuracy_list.append(accuracy)
         precision_list.append(precision)
@@ -333,7 +353,7 @@ def print_poses(model_name, pose_estimation_model, ml_model=False, camera_port=0
             model_input = feature_engineering(model_input)
         if not ml_model:
             predict_frame = np.expand_dims(model_input, axis=0)
-            predict_frame = [predict_frame for _ in range(5)]
+            predict_frame = [predict_frame for _ in range(ENSEMBLE_MODELS)]
             prediction = model(predict_frame, training=False)
         else:
             prediction = model.predict_proba(model_input.reshape(1, -1))
@@ -366,33 +386,154 @@ def print_poses(model_name, pose_estimation_model, ml_model=False, camera_port=0
     print("Estimated frames per second : {0}".format(fps))
 
 
+def pose_switching_plot():
+    # metrics were measured separately
+    base_accuracy = 83.8
+    base_precision = 89.09
+    base_recall = 92.193
+    base_f1score = 90.611
+    base_metrics = [base_accuracy, base_precision, base_recall, base_f1score]
+
+    queue_accuracy = 85.16
+    queue_precision = 93.367
+    queue_recall = 88.89
+    queue_f1score = 91.077
+    queue_metrics = [queue_accuracy, queue_precision, queue_recall, queue_f1score]
+
+    extra_pose_accuracy = 84.8
+    extra_pose_precision = 90.472
+    extra_pose_recall = 92.183
+    extra_pose_f1score = 91.32
+    extra_pose_metrics = [extra_pose_accuracy, extra_pose_precision, extra_pose_recall, extra_pose_f1score]
+
+    combo_accuracy = 85.32
+    combo_precision = 92.97
+    combo_recall = 89.74
+    combo_f1score = 91.33
+    combo_metrics = [combo_accuracy, combo_precision, combo_recall, combo_f1score]
+
+    labels = ['Base Model', 'Model+Frame queue', 'Model+Extra pose', 'Model+Frame queue+Extra pose']
+    title = "Different techniques scores on video test set"
+    ylabel = 'Models scores'
+    xlabel = 'Metrics'
+    xticks = ['Accuracy', 'Precision', 'Recall', 'F1-score']
+    bbox = (0.2, 1.1)
+    models_bar_plot(base_metrics, queue_metrics, extra_pose_metrics, combo_metrics,
+                    labels, title, xlabel, ylabel, xticks, bbox)
+
+
+def ml_models_plot():
+    logitic_acc, _, _, _ = evaluate_model_threshold("movenet_logistic", "movenet", 0.9, 4,"test_video/test2-long",
+                                                    test2_movements, test2_pose_switches, ml_model=True,
+                                                    preprocessing=False, preprocess_name="video2")
+
+    knn_acc, _, _, _ = evaluate_model_threshold("movenet_knn", "movenet", 0.9, 4, "test_video/test2-long",
+                                                    test2_movements, test2_pose_switches, ml_model=True,
+                                                    preprocessing=False, preprocess_name="video2")
+
+    decision_tree_acc, _, _, _ = evaluate_model_threshold("movenet_decision_tree", "movenet", 0.9, 4, "test_video/test2-long",
+                                                    test2_movements, test2_pose_switches, ml_model=True,
+                                                    preprocessing=False, preprocess_name="video2")
+
+    random_forest_acc, _, _, _ = evaluate_model_threshold("movenet_random_forest", "movenet", 0.9, 4, "test_video/test2-long",
+                                                          test2_movements, test2_pose_switches, ml_model=True,
+                                                          preprocessing=False, preprocess_name="video2")
+
+    xgboost_acc, _, _, _ = evaluate_model_threshold("movenet_xgboost", "movenet", 0.9, 4, "test_video/test2-long",
+                                                          test2_movements, test2_pose_switches, ml_model=True,
+                                                          preprocessing=False, preprocess_name="video2")
+
+    mlp_acc, _, _, _ = evaluate_model_threshold("movenet", "movenet", 0.9, 4, "test_video/test2-long",
+                                                    test2_movements, test2_pose_switches, ml_model=False,
+                                                    preprocessing=False, preprocess_name="video2")
+
+    models = ['Logistic Regression', 'K-Nearest Neighbors', 'Decision Tree', 'Random Forest',
+              'XGBoost', 'MLP']
+    accuracies = [logitic_acc, knn_acc, decision_tree_acc, random_forest_acc, xgboost_acc, mlp_acc]
+    plt.figure(figsize=(12, 8))
+    plt.bar(models, accuracies)
+    addlabels(models, accuracies)
+    plt.title("Different machine and deep learning models accuracy on a video test set")
+    plt.xlabel("Machine learning models")
+    plt.ylabel("Test accuracy")
+    plt.show()
+
+
+def knn_vs_mlp():
+    knn_dic = evaluate_model("movenet_knn", "movenet", movenet_preprocess_data, ml_model=True, preprocessing=True)
+    knn_accuracies = list(knn_dic.values())
+    mlp_dic = evaluate_model("movenet", "movenet", movenet_preprocess_data, ml_model=False, preprocessing=True)
+    mlp_accuracies = list(mlp_dic.values())
+    data = {'KNN': knn_accuracies, 'MLP': mlp_accuracies}
+    df = pd.DataFrame(data, columns=['KNN', 'MLP'],
+                      index=['Test ' + str(i) for i in range(1, 12)])
+    plt.style.use('ggplot')
+    df.plot.barh(figsize=(17, 12), fontsize=16.5)
+    for i, val in enumerate(df['MLP']):
+        plt.text(val+1, i+0.15, "{:.2f}".format(val)+"%", color='tab:blue', va="center", fontweight='bold', fontsize=15)
+        knn_val = df['KNN'][i]
+        plt.text(knn_val+1, i-0.15, "{:.2f}".format(knn_val)+"%", color='tab:red', va="center", fontweight='bold', fontsize=15)
+    plt.title('KNN vs MLP accuracy on 11 test sets', fontweight='bold', fontsize=25)
+    plt.ylabel('Tests', fontweight='bold', fontsize=20)
+    plt.xlabel('Accuracy', fontweight='bold', fontsize=20)
+    plt.xlim((0, 120))
+    plt.legend(prop={'size': 20}, bbox_to_anchor=(1.05, 0.06))
+    plt.show()
+
+
+def ensemble_vs_knn():
+
+    knn_accuracy1, _, _, _ = \
+        evaluate_model_threshold("movenet_knn", "movenet", 0.99, 2, "test_video/test1-ultimate", test1_movements,
+                                 test1_pose_switches, ml_model=True, preprocessing=False, preprocess_name="video1")
+
+    ens_accuracy1, _, _, _ = \
+        evaluate_model_threshold("movenet_ensemble/ensemble", "movenet", 0.99, 2, "test_video/test1-ultimate", test1_movements,
+                                 test1_pose_switches, ml_model=False, preprocessing=False, preprocess_name="video1")
+
+    knn_accuracy2, _, _, _ = \
+        evaluate_model_threshold("movenet_knn", "movenet", 0.99, 4, "test_video/test2-long", test2_movements,
+                                 test2_pose_switches, ml_model=True, preprocessing=False, preprocess_name="video2")
+    ens_accuracy2, _, _, _ = \
+        evaluate_model_threshold("movenet_ensemble/ensemble", "movenet", 0.99, 4, "test_video/test2-long", test2_movements,
+                                 test2_pose_switches, ml_model=False, preprocessing=False, preprocess_name="video2")
+
+    knn_acc = [knn_accuracy1, knn_accuracy2]
+    ens_acc = [ens_accuracy1, ens_accuracy2]
+    bar_width = 1/3
+    plt.subplots(figsize=(10, 8))
+
+    # Set position of bar on X axis
+    br1 = np.arange(2)
+    br2 = [x + bar_width for x in br1]
+
+
+    plt.bar(br1, knn_acc, color='indianred', width=bar_width, edgecolor='grey', label='KNN')
+    for i in range(2):
+        plt.text(i, knn_acc[i], "{:.2f}".format(knn_acc[i]), ha='center')
+    plt.bar(br2, ens_acc, color='slateblue', width=bar_width, edgecolor='grey', label='MLP stacked ensemble')
+    for i in range(2):
+        plt.text(i+0.333, ens_acc[i], "{:.2f}".format(ens_acc[i]), ha='center')
+
+    # Adding Xticks
+    plt.title('KNN vs MLP stacked ensemble accuracy on video tests', fontweight='bold', fontsize=15)
+    plt.xlabel('Video tests', fontweight='bold', fontsize=15)
+    plt.ylabel('Accuracy', fontweight='bold', fontsize=15)
+    plt.xticks([r + bar_width/2 for r in range(len(knn_acc))], ['Test1 - hard classification',
+                                                                'Test2 - many pose switches'])
+    plt.ylim([0, 100])
+
+    plt.legend()
+    plt.show()
+
+
 if __name__ == '__main__':
-    # individual bar plots:
+
     accuracy_dic = evaluate_model("movenet_ensemble/ensemble", "movenet", movenet_preprocess_data,
                                   ml_model=False, preprocessing=False)
-    results_bar_plot("movenet ensemble Nadam ", accuracy_dic)
+    results_bar_plot("movenet ensemble Nadam", accuracy_dic)
 
-    # all models bar plot:
-    """
-    mobilenet_dic = evaluate_model("mobilenet", None)
-    movenet_dic = evaluate_model("movenet", movenet_preprocess_data)
-    blazepose_dic = evaluate_model("blazepose", blazepose_preprocess_data)
-    efficientpose_dic = evaluate_model("efficientpose", efficientpose_preprocess_data)
-    models_bar_plot(list(mobilenet_dic.values()), list(movenet_dic.values()),
-                    list(blazepose_dic.values()), list(efficientpose_dic.values()))
-    """
-
-    # confusion matrix:
-    """
-    model_confusion_matrix("movenet", movenet_preprocess_data, "test_dataset/test3-diff_back_diff_lighting")
-    model_confusion_matrix("blazepose", blazepose_preprocess_data, "test_dataset/test7-ultimate")
-    """
-
-    # ultimate test:
-    evaluate_model_threshold("movenet_ensemble/ensemble", "movenet", 0.9, "test_video/test2-long", test2_movements,
+    evaluate_model_threshold("movenet_ensemble/ensemble", "movenet", 0.9, 4, "test_video/test2-long", test2_movements,
                              test2_pose_switches, ml_model=False, preprocessing=False, preprocess_name="video2")
-    #evaluate_model_threshold("blazepose", "blazepose", 0.95, "test_video/test2-long", test2_movements,
-    #                         test2_pose_switches, ml_model=False, preprocessing=False, preprocess_name="video2")
-    #plot_model_metrics("movenet_ensemble/ensemble", "movenet", "test_video/test2-long", test2_movements,
-    #                   test2_pose_switches, ml_model=False, preprocessing=False, preprocess_name="video2")
-    #plot_model_metrics("blazepose", "test_video/test1-ultimate", test1_movements, test1_pose_switches)
+
+
