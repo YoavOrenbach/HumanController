@@ -624,7 +624,7 @@ class Controller:
         model_msg = "You can choose between a more accurate model and a faster model"
         ttk.Label(self.play_frame, text=model_msg).pack(anchor='w', padx=10, pady=5)
         radio_frame = ttk.Frame(self.play_frame)
-        radio_frame.pack(padx=10, pady=5)
+        radio_frame.pack(padx=10)
         thunder_button = ttk.Radiobutton(radio_frame, text="Accurate model", value="thunder", variable=self.movenet_model)
         thunder_button.pack(side=tk.LEFT, expand=True, padx=10)
         lightning_button = ttk.Radiobutton(radio_frame, text="Fast model", value="lightning",  variable=self.movenet_model)
@@ -718,7 +718,7 @@ class HumanControllerApp:
         if width == 3840 and height == 2160:  # 4k
             self.root.geometry('%dx%d+0+0' % (width*0.35, height*0.56))
         elif width == 1920 and height == 1080:  # 1080p
-            self.root.geometry('%dx%d+0+0' % (width*0.59, height*0.86))
+            self.root.geometry('%dx%d+0+0' % (width*0.59, height*0.92))
         self.root.title("Human Controller GUI")
 
         heading_frame = ttk.Frame(self.root)
@@ -906,7 +906,7 @@ def view_pose_image(pose_dir, frame):
     pose_images = os.listdir(pose_dir)
     path = os.path.join(pose_dir, pose_images[len(pose_images)//2])
     image_ = Image.open(path)
-    n_image = image_.resize((180, 180))
+    n_image = image_.resize((256, 256))
     photo = ImageTk.PhotoImage(n_image)
     img_label = tk.Label(frame, image=photo)
     img_label.photo = photo
