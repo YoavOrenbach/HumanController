@@ -19,12 +19,13 @@ from sklearn.neural_network import MLPClassifier
 import joblib
 from sklearn.model_selection import GridSearchCV
 from sklearn.model_selection import RandomizedSearchCV
+from keras.layers.merge import concatenate
 
 
 LEARNING_RATE = 0.001
 
 
-def blazepose_preprocess_data(data_directory="dataset"):
+def blazepose_preprocess_data(data_directory="dataset", ml_model=False):
     pose_embedder = FullBodyPoseEmbedder()
     poses_directories = os.listdir(data_directory)
     embedding_list = []
@@ -52,21 +53,24 @@ def blazepose_preprocess_data(data_directory="dataset"):
 
     embedding_array = np.asarray(embedding_list)
     label_array = np.asarray(label_list)
-    #categorical_labels = tf.keras.utils.to_categorical(label_array)
-    #return embedding_array, categorical_labels, class_num
+    if not ml_model:
+        categorical_labels = tf.keras.utils.to_categorical(label_array)
+        return embedding_array, categorical_labels, class_num
 
-    embedding_array = embedding_array.reshape(embedding_array.shape[0], (embedding_array.shape[1]*embedding_array.shape[2]))
-    return embedding_array, label_array, class_num
+    else:
+        embedding_array = embedding_array.reshape(embedding_array.shape[0],
+                                                  (embedding_array.shape[1]*embedding_array.shape[2]))
+        return embedding_array, label_array, class_num
 
 
-def define_model(num_classes):
+def define_model(num_classes, initializer="glorot_uniform"):
     inputs = tf.keras.Input(shape=(78, 2))
     flatten = tf.keras.layers.Flatten()(inputs)
     #layer = tf.keras.layers.Dense(128, activation=tf.nn.relu6, kernel_regularizer=tf.keras.regularizers.l2(0.0001))(flatten)
     #layer = tf.keras.layers.Dense(64, activation=tf.nn.relu6, kernel_regularizer=tf.keras.regularizers.l2(0.0001))(layer)
-    layer = tf.keras.layers.Dense(128, activation='relu')(flatten)
+    layer = tf.keras.layers.Dense(128, activation='relu', kernel_initializer=initializer)(flatten)
     layer = tf.keras.layers.Dropout(0.5)(layer)
-    layer = tf.keras.layers.Dense(64, activation='relu')(layer)
+    layer = tf.keras.layers.Dense(64, activation='relu', kernel_initializer=initializer)(layer)
     layer = tf.keras.layers.Dropout(0.5)(layer)
     outputs = tf.keras.layers.Dense(num_classes, activation="softmax")(layer)
     model = tf.keras.Model(inputs, outputs)
@@ -74,11 +78,11 @@ def define_model(num_classes):
     return model
 
 
-def train_model(model, X_train, X_val, y_train, y_val):
+def train_model(model, X_train, X_val, y_train, y_val, patience=40):
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=LEARNING_RATE),
                   loss='categorical_crossentropy',
                   metrics=['accuracy'])
-    earlystopping = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=30)
+    earlystopping = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=patience)
     #csv_logger = CSVLogger('saved_models/training5.log', separator=',', append=False)
     history = model.fit(X_train, y_train,
                         epochs=50,
@@ -114,12 +118,18 @@ def plot_train_test(history, model_name):
     plt.show()
 
 
-def blazepose():
-    X, y, num_classes = blazepose_preprocess_data(data_directory="dataset_enhanced/300")
+def blazepose(ml_model=False, preprocessing=True):
+    if preprocessing:
+        X, y, num_classes = blazepose_preprocess_data(data_directory="dataset_enhanced/300", ml_model=ml_model)
+        np.save("preprocessing/blazepose_X_train.npy", X)
+        np.save("preprocessing/blazepose_y_train.npy", y)
+    else:
+        X = np.load("preprocessing/blazepose_X_train.npy")
+        y = np.load("preprocessing/blazepose_y_train.npy")
+        num_classes = 25
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1)
     #X_val, y_val, _ = blazepose_preprocess_data(data_directory="test_dataset/test1-different_clothes")
     model = define_model(num_classes)
-    #model = attention_model(num_classes)
     history = train_model(model, X_train, X_val, y_train, y_val)
     plot_train_test(history, "BlazePose")
     model.save("saved_models/blazepose")
@@ -269,7 +279,7 @@ def machine_learning_models():
     fit_machine_learning_model(mlp, X_train, y_train, X_test, y_test, "mlp")
 
 
-def cnn(num_classes):
+def cnn_model(num_classes):
     inputs = tf.keras.Input(shape=(78, 2))
     x = tf.keras.layers.Conv1D(filters=8, kernel_size=8, activation='relu')(inputs)
     x = tf.keras.layers.Conv1D(filters=4, kernel_size=8, activation='relu')(x)
@@ -286,7 +296,7 @@ def cnn_lstm_model(num_classes):
     inputs = tf.keras.Input(shape=(78, 2))
     cnn_layer = tf.keras.layers.Conv1D(filters=100, kernel_size=4, padding='same')
     x = cnn_layer(inputs)
-    x = tf.keras.layers.GlobalAveragePooling1D(x)
+    #x = tf.keras.layers.GlobalAveragePooling1D(x)
     x = tf.keras.layers.LSTM(64)(x)
     x = tf.keras.layers.Dropout(0.3)(x)
     x = tf.keras.layers.Dense(32, activation='relu')(x)
@@ -297,14 +307,15 @@ def cnn_lstm_model(num_classes):
 
 def cnn_attention(num_classes):
     query_input = tf.keras.Input(shape=(78, 2))
-    value_input = tf.keras.Input(shape=(78, 2))
+    #value_input = tf.keras.Input(shape=(78, 2))
 
     #query_flatten = tf.keras.layers.Flatten()(query_input)
     #value_flatten = tf.keras.layers.Flatten()(value_input)
 
     cnn_layer = tf.keras.layers.Conv1D(filters=4, kernel_size=4, padding='same')
     query_encoding = cnn_layer(query_input)
-    value_encoding = cnn_layer(value_input)
+    #value_encoding = cnn_layer(value_input)
+    value_encoding = cnn_layer(query_input)
 
     attention = tf.keras.layers.Attention()([query_encoding, value_encoding])
 
@@ -317,7 +328,8 @@ def cnn_attention(num_classes):
     layer = tf.keras.layers.Dense(64, activation='relu')(layer)
     layer = tf.keras.layers.Dropout(0.5)(layer)
     outputs = tf.keras.layers.Dense(num_classes, activation="softmax")(layer)
-    model = tf.keras.Model([query_input, value_input], outputs)
+    #model = tf.keras.Model([query_input, value_input], outputs)
+    model = tf.keras.Model(query_input, outputs)
     model.summary()
     return model
 
@@ -374,11 +386,87 @@ def vision_transformer(num_classes):
 
 
 def knn():
-    X_train, y_train, num_classes = blazepose_preprocess_data(data_directory="dataset_enhanced/300")
+    X_train, y_train, num_classes = blazepose_preprocess_data(data_directory="dataset", ml_model=True)
     model = KNeighborsClassifier(n_neighbors=1, weights='uniform', leaf_size=20, metric='manhattan')
     model.fit(X_train, y_train)
-    joblib.dump(model, 'saved_models/blazepose_knn.joblib')
+    joblib.dump(model, 'saved_models/blazepose_knn_small.joblib')
+
+
+def define_stacked_model(members, num_classes):
+    # update all layers in all models to not be trainable
+    for i in range(len(members)):
+        model = members[i]
+        for layer in model.layers:
+            # make not trainable
+            layer.trainable = False
+            # rename to avoid 'unique layer name' issue
+            layer._name = 'ensemble_' + str(i+1) + '_' + layer.name
+    # define multi-headed input
+    ensemble_visible = [model.input for model in members]
+    # concatenate merge output from each model
+    ensemble_outputs = [model.output for model in members]
+    merge = concatenate(ensemble_outputs)
+    hidden = tf.keras.layers.Dense(64, activation='relu', kernel_initializer=tf.keras.initializers.HeNormal())(merge)
+    output = tf.keras.layers.Dense(num_classes, activation='softmax')(hidden)
+    model = tf.keras.Model(inputs=ensemble_visible, outputs=output)
+    return model
+
+
+def ensemble():
+    X = np.load("preprocessing/blazepose_X_train.npy")
+    y = np.load("preprocessing/blazepose_y_train.npy")
+    num_classes = 25
+    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1)
+    num_sub_models = 3
+    sub_models = []
+
+    for i in range(num_sub_models):
+        model = define_model(num_classes, initializer=tf.keras.initializers.HeNormal())
+        train_model(model, X_train, X_val, y_train, y_val)
+        model.save("saved_models/blazepose_ensemble/model_"+str(i+1))
+        sub_models.append(model)
+
+    meta_learner = define_stacked_model(sub_models, num_classes)
+    ensemble_X_train = [X_train for _ in range(num_sub_models)]
+    ensemble_X_val = [X_val for _ in range(num_sub_models)]
+    history = train_model(meta_learner, ensemble_X_train, ensemble_X_val, y_train, y_val, patience=10)
+    plot_train_test(history, "Blazepose Ensemble")
+    meta_learner.save("saved_models/blazepose_ensemble/ensemble")
+
+
+def plot_networks():
+    X_train = np.load("preprocessing/blazepose_X_train.npy")
+    y_train = np.load("preprocessing/blazepose_y_train.npy")
+    num_classes = 25
+    X_val = np.load("preprocessing/blazepose_X_test4.npy")
+    y_val = np.load("preprocessing/blazepose_y_test4.npy")
+
+    mlp = define_model(num_classes)
+    cnn = cnn_model(num_classes)
+    cnn_lstm = cnn_lstm_model(num_classes)
+    cnn_attn = cnn_attention(num_classes)
+    attention = attention_model(num_classes)
+    transformer = vision_transformer(num_classes)
+
+    mlp_history = train_model(mlp, X_train, X_val, y_train, y_val)
+    cnn_history = train_model(cnn, X_train, X_val, y_train, y_val)
+    cnn_lstm_history = train_model(cnn_lstm, X_train, X_val, y_train, y_val)
+    cnn_attn_history = train_model(cnn_attn, X_train, X_val, y_train, y_val)
+    attention_history = train_model(attention, X_train, X_val, y_train, y_val)
+    transformer_history = train_model(transformer, X_train, X_val, y_train, y_val)
+
+    plt.plot(mlp_history.history['val_accuracy'], label="MLP")
+    plt.plot(cnn_history.history['val_accuracy'], label="CNN - 1D convolution")
+    plt.plot(cnn_lstm_history.history['val_accuracy'], label="CNN + LSTM cell")
+    plt.plot(cnn_attn_history.history['val_accuracy'], label="CNN + Attention layer")
+    plt.plot(attention_history.history['val_accuracy'], label="Attention + Linear layers")
+    plt.plot(transformer_history.history['val_accuracy'], label="Vision Transformer")
+    plt.title('Different network architectures validation accuracies')
+    plt.ylabel('Validation accuracy')
+    plt.xlabel('epoch')
+    plt.legend(loc='lower right')
+    plt.show()
 
 
 if __name__ == '__main__':
-    blazepose()
+    plot_networks()

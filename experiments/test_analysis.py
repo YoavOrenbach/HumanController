@@ -403,3 +403,771 @@ def test2_movements(img_num):
     elif 4995 <= img_num <= 4999:
         class_num = -1
     return class_num
+
+
+fighting_dictionary = {
+    "Defend": 0,
+    "LeftKick": 1,
+    "LeftPunch": 2,
+    "Normal": 3,
+    "RightKick": 4,
+    "RightPunch": 5,
+}
+
+fight_pose_switches1 = list(range(58,62)) + list(range(99,102)) + list(range(117,123)) + list(range(151,155)) + \
+                      list(range(183, 188)) + list(range(215, 229)) + list(range(235, 237)) + list(range(266,271)) + \
+                      list(range(292, 297)) + list(range(343,352))
+
+
+def fight_movements1(img_num):
+    class_num = 0
+    if 0 <= img_num <= 57:
+        class_num = fighting_dictionary["Normal"]
+    elif 58 <= img_num <= 61:
+        class_num = -1
+    elif 62 <= img_num <= 98:
+        class_num = fighting_dictionary["RightPunch"]
+    elif 99 <= img_num <= 101:
+        class_num = -1
+    elif 102 <= img_num <= 116:
+        class_num = fighting_dictionary["Normal"]
+    elif 117 <= img_num <= 122:
+        class_num = -1
+    elif 123 <= img_num <= 150:
+        class_num = fighting_dictionary["LeftPunch"]
+    elif 151 <= img_num <= 154:
+        class_num = -1
+    elif 155 <= img_num <= 182:
+        class_num = fighting_dictionary["Normal"]
+    elif 183 <= img_num <= 187:
+        class_num = -1
+    elif 188 <= img_num <= 214:
+        class_num = fighting_dictionary["RightKick"]
+    elif 215 <= img_num <= 228:
+        class_num = -1
+    elif 229 <= img_num <= 234:
+        class_num = fighting_dictionary["Normal"]
+    elif 235 <= img_num <= 236:
+        class_num = -1
+    elif 237 <= img_num <= 265:
+        class_num = fighting_dictionary["LeftKick"]
+    elif 266 <= img_num <= 270:
+        class_num = -1
+    elif 271 <= img_num <= 291:
+        class_num = fighting_dictionary["Normal"]
+    elif 292 <= img_num <= 296:
+        class_num = -1
+    elif 297 <= img_num <= 342:
+        class_num = fighting_dictionary["Defend"]
+    elif 343 <= img_num <= 351:
+        class_num = -1
+    elif 352 <= img_num <= 405:
+        class_num = fighting_dictionary["Normal"]
+    return class_num
+
+
+fight_pose_switches2 = list(range(80, 90)) + list(range(110,115)) + list(range(158, 167)) + list(range(183,186)) + \
+                       list(range(242, 249)) + list(range(267,273)) + list(range(308, 313)) + list(range(330,337)) + \
+                       list(range(371, 378)) + list(range(406, 414))
+
+
+def fight_movements2(img_num):
+    class_num = 0
+    if 0 <= img_num <= 79:
+        class_num = fighting_dictionary["Normal"]
+    elif 80 <= img_num <= 89:
+        class_num = -1
+    elif 90 <= img_num <= 109:
+        class_num = fighting_dictionary["RightPunch"]
+    elif 110 <= img_num <= 114:
+        class_num = -1
+    elif 115 <= img_num <= 157:
+        class_num = fighting_dictionary["Normal"]
+    elif 158 <= img_num <= 166:
+        class_num = -1
+    elif 167 <= img_num <= 182:
+        class_num = fighting_dictionary["LeftPunch"]
+    elif 183 <= img_num <= 185:
+        class_num = -1
+    elif 186 <= img_num <= 241:
+        class_num = fighting_dictionary["Normal"]
+    elif 242 <= img_num <= 248:
+        class_num = -1
+    elif 249 <= img_num <= 266:
+        class_num = fighting_dictionary["RightKick"]
+    elif 267 <= img_num <= 272:
+        class_num = -1
+    elif 273 <= img_num <= 307:
+        class_num = fighting_dictionary["Normal"]
+    elif 308 <= img_num <= 312:
+        class_num = -1
+    elif 313 <= img_num <= 329:
+        class_num = fighting_dictionary["LeftKick"]
+    elif 330 <= img_num <= 336:
+        class_num = -1
+    elif 337 <= img_num <= 370:
+        class_num = fighting_dictionary["Normal"]
+    elif 371 <= img_num <= 377:
+        class_num = -1
+    elif 378 <= img_num <= 405:
+        class_num = fighting_dictionary["Defend"]
+    elif 406 <= img_num <= 413:
+        class_num = -1
+    elif 414 <= img_num <= 423:
+        class_num = fighting_dictionary["Normal"]
+    return class_num
+
+
+fight_pose_switches3 = list(range(88, 95)) + list(range(132, 137)) + list(range(158,165)) + list(range(198, 203)) +\
+                       list(range(233,235)) + list(range(267, 272)) + list(range(312,314)) + list(range(350, 355)) + \
+                       list(range(384, 391)) + list(range(454, 460))
+
+
+def fight_movements3(img_num):
+    class_num = 0
+    if 0 <= img_num <= 87:
+        class_num = fighting_dictionary["Normal"]
+    elif 88 <= img_num <= 94:
+        class_num = -1
+    elif 95 <= img_num <= 131:
+        class_num = fighting_dictionary["RightPunch"]
+    elif 132 <= img_num <= 136:
+        class_num = -1
+    elif 137 <= img_num <= 157:
+        class_num = fighting_dictionary["Normal"]
+    elif 158 <= img_num <= 164:
+        class_num = -1
+    elif 165 <= img_num <= 197:
+        class_num = fighting_dictionary["LeftPunch"]
+    elif 198 <= img_num <= 202:
+        class_num = -1
+    elif 203 <= img_num <= 232:
+        class_num = fighting_dictionary["Normal"]
+    elif 233 <= img_num <= 234:
+        class_num = -1
+    elif 235 <= img_num <= 266:
+        class_num = fighting_dictionary["RightKick"]
+    elif 267 <= img_num <= 271:
+        class_num = -1
+    elif 272 <= img_num <= 311:
+        class_num = fighting_dictionary["Normal"]
+    elif 312 <= img_num <= 313:
+        class_num = -1
+    elif 314 <= img_num <= 349:
+        class_num = fighting_dictionary["LeftKick"]
+    elif 350 <= img_num <= 354:
+        class_num = -1
+    elif 355 <= img_num <= 383:
+        class_num = fighting_dictionary["Normal"]
+    elif 384 <= img_num <= 390:
+        class_num = -1
+    elif 391 <= img_num <= 453:
+        class_num = fighting_dictionary["Defend"]
+    elif 454 <= img_num <= 459:
+        class_num = -1
+    elif 460 <= img_num <= 482:
+        class_num = fighting_dictionary["Normal"]
+    return class_num
+
+
+fight_pose_switches4 = list(range(96, 100)) + list(range(117, 121)) + list(range(132, 138)) + list(range(198,204)) +\
+                       list(range(228,231)) + list(range(253,255)) + list(range(285,288)) + list(range(333, 337)) + \
+                       list(range(363,370))
+
+
+def fight_movements4(img_num):
+    class_num = 0
+    if 0 <= img_num <= 95:
+        class_num = fighting_dictionary["Normal"]
+    elif 96 <= img_num <= 99:
+        class_num = -1
+    elif 100 <= img_num <= 116:
+        class_num = fighting_dictionary["RightPunch"]
+    elif 117 <= img_num <= 120:
+        class_num = -1
+    elif 121 <= img_num <= 131:
+        class_num = fighting_dictionary["Normal"]
+    elif 132 <= img_num <= 137:
+        class_num = -1
+    elif 138 <= img_num <= 162:
+        class_num = fighting_dictionary["LeftPunch"]
+    elif 163 <= img_num <= 197:
+        class_num = fighting_dictionary["Normal"]
+    elif 198 <= img_num <= 203:
+        class_num = -1
+    elif 204 <= img_num <= 227:
+        class_num = fighting_dictionary["RightKick"]
+    elif 228 <= img_num <= 230:
+        class_num = -1
+    elif 231 <= img_num <= 252:
+        class_num = fighting_dictionary["Normal"]
+    elif 253 <= img_num <= 254:
+        class_num = -1
+    elif 255 <= img_num <= 284:
+        class_num = fighting_dictionary["LeftKick"]
+    elif 285 <= img_num <= 288:
+        class_num = -1
+    elif 289 <= img_num <= 332:
+        class_num = fighting_dictionary["Normal"]
+    elif 333 <= img_num <= 336:
+        class_num = -1
+    elif 337 <= img_num <= 362:
+        class_num = fighting_dictionary["Defend"]
+    elif 363 <= img_num <= 369:
+        class_num = -1
+    elif 370 <= img_num <= 406:
+        class_num = fighting_dictionary["Normal"]
+    return class_num
+
+
+fight_pose_switches5 =  list(range(72, 76)) + list(range(108,114)) + list(range(136,138)) + list(range(171,174)) + \
+                        list(range(225,227)) + list(range(257,261)) + list(range(304,306)) + list(range(337,340)) + \
+                        list(range(373,381)) + list(range(411,420))
+
+
+def fight_movements5(img_num):
+    class_num = 0
+    if 0 <= img_num <= 71:
+        class_num = fighting_dictionary["Normal"]
+    elif 72 <= img_num <= 75:
+        class_num = -1
+    elif 76 <= img_num <= 107:
+        class_num = fighting_dictionary["RightPunch"]
+    elif 108 <= img_num <= 113:
+        class_num = -1
+    elif 114 <= img_num <= 135:
+        class_num = fighting_dictionary["Normal"]
+    elif 136 <= img_num <= 137:
+        class_num = -1
+    elif 138 <= img_num <= 170:
+        class_num = fighting_dictionary["LeftPunch"]
+    elif 171 <= img_num <= 174:
+        class_num = -1
+    elif 175 <= img_num <= 224:
+        class_num = fighting_dictionary["Normal"]
+    elif 225 <= img_num <= 226:
+        class_num = -1
+    elif 227 <= img_num <= 256:
+        class_num = fighting_dictionary["RightKick"]
+    elif 257 <= img_num <= 261:
+        class_num = -1
+    elif 262 <= img_num <= 303:
+        class_num = fighting_dictionary["Normal"]
+    elif 304 <= img_num <= 305:
+        class_num = -1
+    elif 306 <= img_num <= 336:
+        class_num = fighting_dictionary["LeftKick"]
+    elif 337 <= img_num <= 339:
+        class_num = -1
+    elif 340 <= img_num <= 372:
+        class_num = fighting_dictionary["Normal"]
+    elif 373 <= img_num <= 380:
+        class_num = -1
+    elif 381 <= img_num <= 410:
+        class_num = fighting_dictionary["Defend"]
+    elif 411 <= img_num <= 419:
+        class_num = -1
+    elif 420 <= img_num <= 451:
+        class_num = fighting_dictionary["Normal"]
+    return class_num
+
+
+fight_pose_switches6 = list(range(67,72)) + list(range(110, 113)) + list(range(128, 134)) + list(range(163,166)) +\
+                       list(range(163,201)) + list(range(224,229)) + list(range(265,269)) + list(range(291,304)) + \
+                       list(range(327,335)) + list(range(362,369))
+
+
+def fight_movements6(img_num):
+    class_num = 0
+    if 0 <= img_num <= 66:
+        class_num = fighting_dictionary["Normal"]
+    elif 67 <= img_num <= 71:
+        class_num = -1
+    elif 72 <= img_num <= 109:
+        class_num = fighting_dictionary["RightPunch"]
+    elif 110 <= img_num <= 112:
+        class_num = -1
+    elif 113 <= img_num <= 127:
+        class_num = fighting_dictionary["Normal"]
+    elif 128 <= img_num <= 134:
+        class_num = -1
+    elif 135 <= img_num <= 162:
+        class_num = fighting_dictionary["LeftPunch"]
+    elif 163 <= img_num <= 166:
+        class_num = -1
+    elif 167 <= img_num <= 195:
+        class_num = fighting_dictionary["Normal"]
+    elif 196 <= img_num <= 200:
+        class_num = -1
+    elif 201 <= img_num <= 223:
+        class_num = fighting_dictionary["RightKick"]
+    elif 224 <= img_num <= 228:
+        class_num = -1
+    elif 229 <= img_num <= 264:
+        class_num = fighting_dictionary["Normal"]
+    elif 265 <= img_num <= 268:
+        class_num = -1
+    elif 269 <= img_num <= 290:
+        class_num = fighting_dictionary["LeftKick"]
+    elif 291 <= img_num <= 303:
+        class_num = -1
+    elif 304 <= img_num <= 326:
+        class_num = fighting_dictionary["Normal"]
+    elif 327 <= img_num <= 334:
+        class_num = -1
+    elif 335 <= img_num <= 361:
+        class_num = fighting_dictionary["Defend"]
+    elif 362 <= img_num <= 369:
+        class_num = -1
+    elif 370 <= img_num <= 408:
+        class_num = fighting_dictionary["Normal"]
+    return class_num
+
+
+fight_pose_switches7 = list(range(81, 87)) + list(range(119,126)) + list(range(146,149)) + list(range(171,175)) + \
+                       list(range(214,216)) + list(range(238,241)) + list(range(273,276)) + list(range(301,305)) +\
+                       list(range(333,340)) + list(range(370,376))
+
+
+def fight_movements7(img_num):
+    class_num = 0
+    if 0 <= img_num <= 80:
+        class_num = fighting_dictionary["Normal"]
+    elif 81 <= img_num <= 86:
+        class_num = -1
+    elif 87 <= img_num <= 118:
+        class_num = fighting_dictionary["RightPunch"]
+    elif 119 <= img_num <= 125:
+        class_num = -1
+    elif 126 <= img_num <= 145:
+        class_num = fighting_dictionary["Normal"]
+    elif 146 <= img_num <= 148:
+        class_num = -1
+    elif 149 <= img_num <= 170:
+        class_num = fighting_dictionary["LeftPunch"]
+    elif 171 <= img_num <= 174:
+        class_num = -1
+    elif 175 <= img_num <= 213:
+        class_num = fighting_dictionary["Normal"]
+    elif 214 <= img_num <= 215:
+        class_num = -1
+    elif 216 <= img_num <= 237:
+        class_num = fighting_dictionary["RightKick"]
+    elif 238 <= img_num <= 240:
+        class_num = -1
+    elif 241 <= img_num <= 272:
+        class_num = fighting_dictionary["Normal"]
+    elif 273 <= img_num <= 275:
+        class_num = -1
+    elif 276 <= img_num <= 300:
+        class_num = fighting_dictionary["LeftKick"]
+    elif 301 <= img_num <= 304:
+        class_num = -1
+    elif 305 <= img_num <= 332:
+        class_num = fighting_dictionary["Normal"]
+    elif 333 <= img_num <= 339:
+        class_num = -1
+    elif 340 <= img_num <= 369:
+        class_num = fighting_dictionary["Defend"]
+    elif 370 <= img_num <= 375:
+        class_num = -1
+    elif 376 <= img_num <= 415:
+        class_num = fighting_dictionary["Normal"]
+    return class_num
+
+
+fight_pose_switches8 = list(range(48,51)) + list(range(79,82)) + list(range(98,102)) + list(range(126,130)) + \
+                       list(range(164,166)) + list(range(183,186)) + list(range(213,215)) + list(range(237,241)) + \
+                       list(range(265,270)) + list(range(323, 334))
+
+
+def fight_movements8(img_num):
+    class_num = 0
+    if 0 <= img_num <= 47:
+        class_num = fighting_dictionary["Normal"]
+    elif 48 <= img_num <= 50:
+        class_num = -1
+    elif 51 <= img_num <= 78:
+        class_num = fighting_dictionary["RightPunch"]
+    elif 79 <= img_num <= 81:
+        class_num = -1
+    elif 82 <= img_num <= 97:
+        class_num = fighting_dictionary["Normal"]
+    elif 98 <= img_num <= 101:
+        class_num = -1
+    elif 102 <= img_num <= 125:
+        class_num = fighting_dictionary["LeftPunch"]
+    elif 126 <= img_num <= 129:
+        class_num = -1
+    elif 130 <= img_num <= 163:
+        class_num = fighting_dictionary["Normal"]
+    elif 164 <= img_num <= 165:
+        class_num = -1
+    elif 166 <= img_num <= 182:
+        class_num = fighting_dictionary["RightKick"]
+    elif 183 <= img_num <= 185:
+        class_num = -1
+    elif 186 <= img_num <= 212:
+        class_num = fighting_dictionary["Normal"]
+    elif 213 <= img_num <= 214:
+        class_num = -1
+    elif 215 <= img_num <= 236:
+        class_num = fighting_dictionary["LeftKick"]
+    elif 237 <= img_num <= 240:
+        class_num = -1
+    elif 241 <= img_num <= 264:
+        class_num = fighting_dictionary["Normal"]
+    elif 265 <= img_num <= 269:
+        class_num = -1
+    elif 270 <= img_num <= 322:
+        class_num = fighting_dictionary["Defend"]
+    elif 323 <= img_num <= 333:
+        class_num = -1
+    elif 334 <= img_num <= 350:
+        class_num = fighting_dictionary["Normal"]
+    return class_num
+
+
+fight_pose_switches9 = list(range(67, 76)) + list(range(129,137)) + list(range(164, 169)) + list(range(208, 215)) + \
+                       list(range(262,264)) + list(range(301,305)) + list(range(348,350)) + list(range(395,402)) +\
+                       list(range(447, 456)) + list(range(489,500))
+
+
+def fight_movements9(img_num):
+    class_num = 0
+    if 0 <= img_num <= 66:
+        class_num = fighting_dictionary["Normal"]
+    elif 67 <= img_num <= 75:
+        class_num = -1
+    elif 76 <= img_num <= 128:
+        class_num = fighting_dictionary["RightPunch"]
+    elif 129 <= img_num <= 136:
+        class_num = -1
+    elif 137 <= img_num <= 163:
+        class_num = fighting_dictionary["Normal"]
+    elif 164 <= img_num <= 168:
+        class_num = -1
+    elif 169 <= img_num <= 207:
+        class_num = fighting_dictionary["LeftPunch"]
+    elif 208 <= img_num <= 214:
+        class_num = -1
+    elif 215 <= img_num <= 261:
+        class_num = fighting_dictionary["Normal"]
+    elif 262 <= img_num <= 263:
+        class_num = -1
+    elif 264 <= img_num <= 300:
+        class_num = fighting_dictionary["RightKick"]
+    elif 301 <= img_num <= 304:
+        class_num = -1
+    elif 305 <= img_num <= 347:
+        class_num = fighting_dictionary["Normal"]
+    elif 348 <= img_num <= 349:
+        class_num = -1
+    elif 350 <= img_num <= 394:
+        class_num = fighting_dictionary["LeftKick"]
+    elif 395 <= img_num <= 401:
+        class_num = -1
+    elif 402 <= img_num <= 446:
+        class_num = fighting_dictionary["Normal"]
+    elif 447 <= img_num <= 455:
+        class_num = -1
+    elif 456 <= img_num <= 488:
+        class_num = fighting_dictionary["Defend"]
+    elif 489 <= img_num <= 499:
+        class_num = -1
+    elif 500 <= img_num <= 536:
+        class_num =fighting_dictionary["Normal"]
+    return class_num
+
+
+fight_pose_switches10 = list(range(231,236)) + list(range(256,259)) + list(range(294,299)) + list(range(319,323)) + \
+                        list(range(364,366)) + list(range(388,392)) + list(range(436,438)) + list(range(462,467)) + \
+                        list(range(496,503)) + list(range(529,539))
+
+
+def fight_movements10(img_num):
+    class_num = 0
+    if 0 <= img_num <= 230:
+        class_num = fighting_dictionary["Normal"]
+    elif 231 <= img_num <= 235:
+        class_num = -1
+    elif 236 <= img_num <= 255:
+        class_num = fighting_dictionary["RightPunch"]
+    elif 256 <= img_num <= 258:
+        class_num = -1
+    elif 259 <= img_num <= 293:
+        class_num = fighting_dictionary["Normal"]
+    elif 294 <= img_num <= 298:
+        class_num = -1
+    elif 299 <= img_num <= 318:
+        class_num = fighting_dictionary["LeftPunch"]
+    elif 319 <= img_num <= 322:
+        class_num = -1
+    elif 323 <= img_num <= 363:
+        class_num = fighting_dictionary["Normal"]
+    elif 364 <= img_num <= 365:
+        class_num = -1
+    elif 366 <= img_num <= 387:
+        class_num = fighting_dictionary["RightKick"]
+    elif 388 <= img_num <= 391:
+        class_num = -1
+    elif 392 <= img_num <= 435:
+        class_num = fighting_dictionary["Normal"]
+    elif 436 <= img_num <= 437:
+        class_num = -1
+    elif 438 <= img_num <= 461:
+        class_num = fighting_dictionary["LeftKick"]
+    elif 462 <= img_num <= 466:
+        class_num = -1
+    elif 467 <= img_num <= 495:
+        class_num = fighting_dictionary["Normal"]
+    elif 496 <= img_num <= 502:
+        class_num = -1
+    elif 503 <= img_num <= 528:
+        class_num = fighting_dictionary["Defend"]
+    elif 529 <= img_num <= 538:
+        class_num = -1
+    elif 539 <= img_num <= 643:
+        class_num = fighting_dictionary["Normal"]
+    return class_num
+
+
+golf_dictionary = {
+    "Golf": 0,
+    "Normal": 1
+}
+
+golf_pose_switches1 = list(range(63,73)) + list(range(156,178))
+
+
+def golf_movements1(img_num):
+    class_num = 0
+    if 0 <= img_num <= 62:
+        class_num = golf_dictionary["Normal"]
+    elif 63 <= img_num <= 72:
+        class_num = -1
+    elif 73 <= img_num <= 155:
+        class_num = golf_dictionary["Golf"]
+    elif 156 <= img_num <= 177:
+        class_num = -1
+    elif 178 <= img_num <= 223:
+        class_num = golf_dictionary["Normal"]
+    return class_num
+
+
+tennis_dictionary = {
+    "Backhand": 0,
+    "Forehand": 1,
+    "Normal": 2,
+    "TennisServe": 3
+}
+
+tennis_pose_switches1 = list(range(69,77)) + list(range(132,142)) + list(range(192,197)) + list(range(246,255)) +\
+                        list(range(307,315)) + list(range(377,380))
+
+
+def tennis_movements1(img_num):
+    class_num = 0
+    if 0 <= img_num <= 68:
+        class_num = tennis_dictionary["Normal"]
+    elif 69 <= img_num <= 76:
+        class_num = -1
+    elif 77 <= img_num <= 131:
+        class_num = tennis_dictionary["Forehand"]
+    elif 132 <= img_num <= 141:
+        class_num = -1
+    elif 142 <= img_num <= 191:
+        class_num = tennis_dictionary["Normal"]
+    elif 192 <= img_num <= 196:
+        class_num = -1
+    elif 197 <= img_num <= 245:
+        class_num = tennis_dictionary["Backhand"]
+    elif 246 <= img_num <= 254:
+        class_num = -1
+    elif 255 <= img_num <= 306:
+        class_num = tennis_dictionary["Normal"]
+    elif 307 <= img_num <= 314:
+        class_num = -1
+    elif 315 <= img_num <= 376:
+        class_num = tennis_dictionary["TennisServe"]
+    elif 377 <= img_num <= 379:
+        class_num = -1
+    elif 380 <= img_num <= 428:
+        class_num = tennis_dictionary["Normal"]
+    return class_num
+
+
+bowling_dictionary = {
+    "Normal": 0,
+    "ThrowBall": 1
+}
+
+
+bowling_pose_switches1 = list(range(57,70)) + list(range(168,178))
+
+
+def bowling_movements1(img_num):
+    class_num = 0
+    if 0 <= img_num <= 56:
+        class_num = bowling_dictionary["Normal"]
+    elif 57 <= img_num <= 69:
+        class_num = -1
+    elif 70 <= img_num <= 167:
+        class_num = bowling_dictionary["ThrowBall"]
+    elif 168 <= img_num <= 177:
+        class_num = -1
+    elif 178 <= img_num <= 205:
+        class_num = bowling_dictionary["Normal"]
+    return class_num
+
+
+fps_dictionary = {
+    "AimCenter": 0,
+    "AimLeft": 1,
+    "AimRight": 2,
+    "Climb": 3,
+    "Crouch": 4,
+    "Jump": 5,
+    "Normal": 6,
+    "Run": 7,
+    "Walk": 8
+}
+
+
+fps_pose_switches1 = list(range(46,51)) + list(range(249,257)) + list(range(477,482)) + list(range(563,546)) + list(range(585, 596))
+
+
+def fps_movements1(img_num):
+    class_num = 0
+    if 0 <= img_num <= 45:
+        class_num = fps_dictionary["Normal"]
+    elif 46 <= img_num <= 50:
+        class_num = -1
+    elif 51 <= img_num <= 121:
+        class_num = fps_dictionary["AimCenter"]
+    elif 122 <= img_num <= 191:
+        class_num = fps_dictionary["AimRight"]
+    elif 192 <= img_num <= 196:
+        class_num = fps_dictionary["AimCenter"]
+    elif 197 <= img_num <= 248:
+        class_num = fps_dictionary["AimLeft"]
+    elif 249 <= img_num <= 256:
+        class_num = -1
+    elif 257 <= img_num <= 285:
+        class_num = fps_dictionary["Normal"]
+    elif 286 <= img_num <= 355:
+        class_num = fps_dictionary["Walk"]
+    elif 356 <= img_num <= 417:
+        class_num = fps_dictionary["Run"]
+    elif 418 <= img_num <= 421:
+        class_num = fps_dictionary["Normal"]
+    elif 422 <= img_num <= 445:
+        class_num = fps_dictionary["Jump"]
+    elif 446 <= img_num <= 476:
+        class_num = fps_dictionary["Normal"]
+    elif 477 <= img_num <= 481:
+        class_num = -1
+    elif 482 <= img_num <= 535:
+        class_num = fps_dictionary["Climb"]
+    elif 536 <= img_num <= 545:
+        class_num = -1
+    elif 546 <= img_num <= 584:
+        class_num = fps_dictionary["Crouch"]
+    elif 585 <= img_num <= 595:
+        class_num = -1
+    elif 596 <= img_num <= 617:
+        class_num = fps_dictionary["Normal"]
+    return class_num
+
+
+driving_dictionary = {
+    "HoldWheel": 0,
+    "Normal": 1,
+    "TurnLeft": 2,
+    "TurnRight": 3
+}
+
+
+driving_pose_switches1 = list(range(77,84)) + list(range(377, 382))
+
+
+def driving_movements1(img_num):
+    class_num = 0
+    if 0 <= img_num <= 76:
+        class_num = driving_dictionary["Normal"]
+    elif 77 <= img_num <= 83:
+        class_num = -1
+    elif 84 <= img_num <= 159:
+        class_num = driving_dictionary["HoldWheel"]
+    elif 160 <= img_num <= 228:
+        class_num = driving_dictionary["TurnRight"]
+    elif 229 <= img_num <= 263:
+        class_num = driving_dictionary["HoldWheel"]
+    elif 264 <= img_num <= 314:
+        class_num = driving_dictionary["TurnLeft"]
+    elif 315 <= img_num <= 376:
+        class_num = driving_dictionary["HoldWheel"]
+    elif 377 <= img_num <= 381:
+        class_num = -1
+    elif 382 <= img_num <= 436:
+        class_num = driving_dictionary["Normal"]
+    return class_num
+
+
+misc_dictionary = {
+    "Clap": 0,
+    "FlapArms": 1,
+    "Normal": 2,
+    "Wave": 3
+}
+
+
+misc_pose_switches1 = list(range(6,12)) + list(range(103,107)) + list(range(191,195)) + list(range(252,256))
+
+
+def misc_movements1(img_num):
+    class_num = 0
+    if 0 <= img_num <= 5:
+        class_num = misc_dictionary["Normal"]
+    elif 6 <= img_num <= 11:
+        class_num = -1
+    elif 12 <= img_num <= 102:
+        class_num = misc_dictionary["Wave"]
+    elif 103 <= img_num <= 106:
+        class_num = -1
+    elif 107 <= img_num <= 113:
+        class_num = misc_dictionary["Normal"]
+    elif 114 <= img_num <= 190:
+        class_num = misc_dictionary["FlapArms"]
+    elif 191 <= img_num <= 194:
+        class_num = -1
+    elif 195 <= img_num <= 251:
+        class_num = misc_dictionary["Clap"]
+    elif 252 <= img_num <= 255:
+        class_num = -1
+    elif 256 <= img_num <= 293:
+        class_num = misc_dictionary["Normal"]
+    return class_num
+
+
+
+# Code to fix tests file names
+"""
+import os
+def rename_images():
+    full_path = "gaming_dataset/tennis/test10-tennis/"
+    img_num = 0
+    colour_num = 1
+    cur_img = full_path+f"Colour {colour_num}.png"
+
+    while img_num < 313:
+        if os.path.isfile(cur_img):
+            os.rename(cur_img, full_path+f"img{img_num}.png")
+            img_num += 1
+        colour_num += 1
+        cur_img = full_path+f"Colour {colour_num}.png"
+
+
+if __name__ == '__main__':
+    rename_images()
+"""

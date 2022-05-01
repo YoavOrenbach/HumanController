@@ -10,7 +10,12 @@ from keras.layers.merge import concatenate
 #from tensorflow.keras.utils import plot_model
 #os.environ["PATH"] += os.pathsep + 'E:/school/Graphviz/bin/'
 
+from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import RidgeClassifier
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from xgboost import XGBClassifier
 import joblib
 
 # useful links:
@@ -98,7 +103,7 @@ def define_model3(num_classes, initializer="glorot_uniform"):
     return model
 
 
-def train_model(model, X_train, X_val, y_train, y_val, optimizer="Adam", patience=40):
+def train_model(model, X_train, X_val, y_train, y_val, optimizer="Adam", patience=30):
     model.compile(optimizer=optimizer,
                   loss='categorical_crossentropy',
                   metrics=['accuracy'])
@@ -161,6 +166,39 @@ def knn():
     joblib.dump(model, 'saved_models/movenet_knn.joblib')
 
 
+def fit_machine_learning_model(model, X_train, y_train, model_name):
+    model.fit(X_train, y_train)
+    joblib.dump(model, f'saved_models/movenet_{model_name}.joblib')
+
+
+def machine_learning_models():
+    X_train, y_train, num_classes = movenet_preprocess_data(data_directory="dataset_enhanced/300", ml_model=True)
+
+    # Logistic regression:
+    fit_machine_learning_model(LogisticRegression(C=11.288378916846883, penalty='l2', solver='liblinear'),
+                               X_train, y_train, "logistic")
+
+    # Ridge classifier:
+    fit_machine_learning_model(RidgeClassifier(), X_train, y_train, "ridge")
+
+    # K-nearest neighbors:
+    knn = KNeighborsClassifier(n_neighbors=1, weights='uniform', leaf_size=20, metric='manhattan')
+    fit_machine_learning_model(knn, X_train, y_train, "knn")
+
+    # Decision Tree:
+    decision_tree = DecisionTreeClassifier(criterion='gini', max_depth=70, min_samples_split=4, min_samples_leaf=1)
+    fit_machine_learning_model(decision_tree, X_train, y_train, "decision_tree")
+
+    # Random Forest:
+    random_forest = RandomForestClassifier(criterion='gini', max_depth=70, min_samples_split=4, min_samples_leaf=1)
+    fit_machine_learning_model(random_forest, X_train, y_train, "random_forest")
+
+    # Extreme boosting:
+    fit_machine_learning_model(XGBClassifier(objective='multi:softmax', num_class=num_classes, subsample=0.8,
+                                             min_child_weight=5, max_depth=3, learning_rate=0.1, gamma=1.5,
+                                             colsample_bytree=0.6), X_train, y_train, "xgboost")
+
+
 def define_stacked_model(members, num_classes):
     # update all layers in all models to not be trainable
     for i in range(len(members)):
@@ -188,7 +226,7 @@ def ensemble():
     y = np.load("preprocessing/movenet_y_train.npy")
     num_classes = 25
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1)
-    num_sub_models = 5
+    num_sub_models = 3
     sub_models = []
 
     for i in range(num_sub_models):
@@ -207,7 +245,7 @@ def ensemble():
 
 def define_ensemble_model():
     sub_models = []
-    for i in range(4):
+    for i in range(3):
         model = tf.keras.models.load_model("saved_models/movenet_ensemble/model_"+str(i+1))
         model._name = 'model' + str(i)
         sub_models.append(model)
@@ -218,7 +256,7 @@ def define_ensemble_model():
     return ensemble_model
 
 
-def ensemble_part2():
+def ensemble_avg():
     X = np.load("preprocessing/movenet_X_train.npy")
     y = np.load("preprocessing/movenet_y_train.npy")
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1)
@@ -260,42 +298,188 @@ def model_initializers():
     model_zeros.save("saved_models/movenet_initializers/zeros")
 
 
-def ensemble_part3():
-    X, y, num_classes = movenet_preprocess_data(data_directory="dataset_enhanced/300", static=False)
+class Distiller(tf.keras.Model):
+    def __init__(self, student, teacher):
+        super(Distiller, self).__init__()
+        self.teacher = teacher
+        self.student = student
+
+    def compile(
+            self,
+            optimizer,
+            metrics,
+            student_loss_fn,
+            distillation_loss_fn,
+            alpha=0.1,
+            temperature=3,
+    ):
+        """ Configure the distiller.
+
+        Args:
+            optimizer: Keras optimizer for the student weights
+            metrics: Keras metrics for evaluation
+            student_loss_fn: Loss function of difference between student
+                predictions and ground-truth
+            distillation_loss_fn: Loss function of difference between soft
+                student predictions and soft teacher predictions
+            alpha: weight to student_loss_fn and 1-alpha to distillation_loss_fn
+            temperature: Temperature for softening probability distributions.
+                Larger temperature gives softer distributions.
+        """
+        super(Distiller, self).compile(optimizer=optimizer, metrics=metrics)
+        self.student_loss_fn = student_loss_fn
+        self.distillation_loss_fn = distillation_loss_fn
+        self.alpha = alpha
+        self.temperature = temperature
+
+    def train_step(self, data):
+        # Unpack data
+        x, y = data
+
+        # Forward pass of teacher
+        teacher_predictions = self.teacher(x, training=False)
+
+        with tf.GradientTape() as tape:
+            # Forward pass of student
+            student_predictions = self.student(x, training=True)
+
+            # Compute losses
+            student_loss = self.student_loss_fn(y, student_predictions)
+            distillation_loss = self.distillation_loss_fn(
+                tf.nn.softmax(teacher_predictions / self.temperature, axis=1),
+                tf.nn.softmax(student_predictions / self.temperature, axis=1),
+            )
+            loss = self.alpha * student_loss + (1 - self.alpha) * distillation_loss
+
+        # Compute gradients
+        trainable_vars = self.student.trainable_variables
+        gradients = tape.gradient(loss, trainable_vars)
+
+        # Update weights
+        self.optimizer.apply_gradients(zip(gradients, trainable_vars))
+
+        # Update the metrics configured in `compile()`.
+        self.compiled_metrics.update_state(y, student_predictions)
+
+        # Return a dict of performance
+        results = {m.name: m.result() for m in self.metrics}
+        results.update(
+            {"student_loss": student_loss, "distillation_loss": distillation_loss}
+        )
+        return results
+
+    def test_step(self, data):
+        # Unpack the data
+        x, y = data
+
+        # Compute predictions
+        y_prediction = self.student(x, training=False)
+
+        # Calculate the loss
+        student_loss = self.student_loss_fn(y, y_prediction)
+
+        # Update the metrics.
+        self.compiled_metrics.update_state(y, y_prediction)
+
+        # Return a dict of performance
+        results = {m.name: m.result() for m in self.metrics}
+        results.update({"student_loss": student_loss})
+        return results
+
+
+
+def knowledge_distillation():
+    X = np.load("preprocessing/movenet_X_train.npy")
+    y = np.load("preprocessing/movenet_y_train.npy")
+    num_classes = 25
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1)
-    num_sub_models = 6
 
-    model_he_uniform = define_model(num_classes, tf.keras.initializers.HeUniform())
-    model_he_normal = define_model(num_classes, tf.keras.initializers.HeNormal())
-    model_glorot_normal = define_model(num_classes, tf.keras.initializers.GlorotNormal())
-    model_glorot_uniform = define_model(num_classes, tf.keras.initializers.GlorotUniform())
-    model_random_normal = define_model(num_classes, tf.keras.initializers.RandomNormal())
-    model_random_uniform = define_model(num_classes, tf.keras.initializers.RandomUniform())
+    teacher = tf.keras.Sequential(
+        [
+            tf.keras.Input(shape=(78, 2)),
+            tf.keras.layers.Flatten(),
+            tf.keras.layers.Dense(2048, activation='relu'),
+            tf.keras.layers.Dropout(0.5),
+            tf.keras.layers.Dense(1024, activation='relu'),
+            tf.keras.layers.Dropout(0.5),
+            tf.keras.layers.Dense(512, activation='relu'),
+            tf.keras.layers.Dropout(0.5),
+            tf.keras.layers.Dense(256, activation='relu'),
+            tf.keras.layers.Dropout(0.5),
+            tf.keras.layers.Dense(128, activation='relu'),
+            tf.keras.layers.Dropout(0.5),
+            tf.keras.layers.Dense(num_classes, activation="softmax")
+        ],
+        name="teacher",
+    )
 
-    train_model(model_he_uniform, X_train, X_val, y_train, y_val)
-    train_model(model_he_normal, X_train, X_val, y_train, y_val)
-    train_model(model_glorot_normal, X_train, X_val, y_train, y_val)
-    train_model(model_glorot_uniform, X_train, X_val, y_train, y_val)
-    train_model(model_random_normal, X_train, X_val, y_train, y_val)
-    train_model(model_random_uniform, X_train, X_val, y_train, y_val)
+    # Create the student
+    student = tf.keras.Sequential(
+        [
+            tf.keras.Input(shape=(78, 2)),
+            tf.keras.layers.Flatten(),
+            tf.keras.layers.Dense(128, activation='relu'),
+            tf.keras.layers.Dropout(0.5),
+            tf.keras.layers.Dense(64, activation='relu'),
+            tf.keras.layers.Dropout(0.5),
+            tf.keras.layers.Dense(num_classes, activation="softmax")
+        ],
+        name="student",
+    )
 
-    model_he_uniform.save("saved_models/movenet_ensemble2/he_uniform")
-    model_he_normal.save("saved_models/movenet_ensemble2/he_normal")
-    model_glorot_normal.save("saved_models/movenet_ensemble2/glorot_normal")
-    model_glorot_uniform.save("saved_models/movenet_ensemble2/glorot_uniform")
-    model_random_normal.save("saved_models/movenet_ensemble2/random_normal")
-    model_random_uniform.save("saved_models/movenet_ensemble2/random_uniform")
+    train_model(teacher, X_train, X_val, y_train, y_val)
 
-    sub_models = [model_he_uniform, model_he_normal, model_glorot_normal, model_glorot_uniform,
-                  model_random_normal, model_random_uniform]
+    distiller = Distiller(student=student, teacher=teacher)
+    distiller.compile(
+        optimizer=tf.keras.optimizers.Adam(),
+        metrics=[tf.keras.metrics.CategoricalAccuracy()],
+        student_loss_fn=tf.keras.losses.CategoricalCrossentropy(),
+        distillation_loss_fn=tf.keras.losses.KLDivergence(),
+        alpha=0.1,
+        temperature=10,
+    )
+
+    distiller.fit(X_train, y_train, epochs=20)
+
+    results_dic = {}
+    test_data = os.listdir("test_dataset")
+    test_data = test_data[:1]+test_data[3:]+test_data[1:3]
+    for i, test_folder in enumerate(test_data):
+        X = np.load(f"preprocessing/movenet_X_test{i+1}.npy")
+        y = np.load(f"preprocessing/movenet_y_test{i+1}.npy")
+        accuracy, loss = distiller.evaluate(X, y)
+        results_dic['test '+str(i+1)] = accuracy * 100
+
+    keys = list(results_dic.keys())
+    values = list(results_dic.values())
+    plt.figure(figsize=(10, 5))
+    plt.bar(keys, values)
+    for i in range(len(keys)):
+        plt.text(i, values[i], "{:.2f}".format(values[i]), ha='center')
+    plt.title("Knowledge distillation accuracy on test sets")
+    plt.xlabel("test sets")
+    plt.ylabel("test accuracy")
+    plt.show()
+
+
+def train_game(game):
+    X, y, num_classes = movenet_preprocess_data(data_directory=f"gaming_dataset/{game}/train", static=False)
+    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.1)
+    num_sub_models = 3
+    sub_models = []
+
+    for i in range(num_sub_models):
+        model = define_model(num_classes, initializer=tf.keras.initializers.HeNormal())
+        train_model(model, X_train, X_val, y_train, y_val, optimizer="Nadam")
+        sub_models.append(model)
 
     meta_learner = define_stacked_model(sub_models, num_classes)
     ensemble_X_train = [X_train for _ in range(num_sub_models)]
     ensemble_X_val = [X_val for _ in range(num_sub_models)]
-    history = train_model(meta_learner, ensemble_X_train, ensemble_X_val, y_train, y_val)
-    plot_train_test(history, "MoveNet")
-    meta_learner.save("saved_models/movenet_ensemble2/ensemble")
+    history = train_model(meta_learner, ensemble_X_train, ensemble_X_val, y_train, y_val, patience=10)
+    plot_train_test(history, "MoveNet Ensemble")
+    meta_learner.save(f"gaming_dataset/{game}/model")
 
 
 if __name__ == '__main__':
-    ensemble()
+    train_game("misc")
