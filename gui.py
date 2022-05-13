@@ -417,7 +417,7 @@ class Controller:
         self.selected_keys = []
         win = ttk.Toplevel(title="keys options")
         win.grab_set()
-        ttk.Label(win, text="Choose up to 2 keyboard or mouse keys", font=("Arial", 10)).pack(padx=10, pady=10)
+        ttk.Label(win, text="Choose different keyboard or mouse keys", font=("Arial", 10)).pack(padx=10, pady=10)
         self.keyboard(win)
         self.mouse(win)
         exit_frame = ttk.Frame(win)
@@ -524,9 +524,9 @@ class Controller:
             button['bootstyle'] = LIGHT
 
     def configure_keys(self, pose, win):
-        if len(self.selected_keys) > 2:
-            mb.showerror("Keys Error", "Can only choose up to 2 keys")
-        elif len(self.selected_keys) == 0:
+        #if len(self.selected_keys) > 2:
+        #    mb.showerror("Keys Error", "Can only choose up to 2 keys")
+        if len(self.selected_keys) == 0:
             mb.showwarning("Keys Warning", "No keys selected, keeping the current keys")
             close_window(win)
         else:
@@ -890,11 +890,12 @@ def close_window(win):
 def find_camera_ports():
     port = 0
     port_list = []
-    camera = cv2.VideoCapture(port)
+    camera = cv2.VideoCapture(port, cv2.CAP_DSHOW)
     while camera.isOpened():
         port_list.append(port)
         port = port + 1
-        camera = cv2.VideoCapture(port)
+        camera = cv2.VideoCapture(port, cv2.CAP_DSHOW)
+    camera.release()
     return port_list
 
 

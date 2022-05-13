@@ -5,11 +5,11 @@ import time
 from pose_estimation_utils import load_movenet_model, movenet_inference_video, init_crop_region, \
     determine_crop_region, feature_engineering
 from keys_for_game import keycodes, mouse_codes, wheel_codes, movement_codes,\
-    PressKey, ReleaseKey, mouse_click, wheel_movement, move_mouse
+    PressKey, ReleaseKey, mouse_click, wheel_movement, move_mouse, get_numlock_state
 
 IMG_SIZE = (256, 256)
 THRESHOLD = 0.9
-ENSEMBLE_SIZE = 5
+ENSEMBLE_SIZE = 3
 SPECIAL_KEYS = ['Home', 'Up', 'PageUp', 'Left', 'Right', 'End', 'Down', 'PageDown', 'Insert', 'Delete']
 
 
@@ -31,8 +31,8 @@ def simulate_press(key):
         else:
             move_mouse(*movement_codes[key])
     else:
-        if key in SPECIAL_KEYS:
-            PressKey(0x2A)
+        #if key in SPECIAL_KEYS:
+        #    PressKey(0x2A)
         PressKey(keycodes[key])
 
 
@@ -42,26 +42,8 @@ def simulate_release(key):
             mouse_click(mouse_codes[key][1])
     else:
         ReleaseKey(keycodes[key])
-        if key in SPECIAL_KEYS:
-            ReleaseKey(0x2A)
-
-
-def keystroke_press(keys):
-    if '_' not in keys:
-        simulate_press(keys)
-    else:
-        key1, key2 = keys.split('_')
-        simulate_press(key1)
-        simulate_press(key2)
-
-
-def keystroke_release(keys):
-    if '_' not in keys:
-        simulate_release(keys)
-    else:
-        key1, key2 = keys.split('_')
-        simulate_release(key1)
-        simulate_release(key2)
+        #if key in SPECIAL_KEYS:
+        #    ReleaseKey(0x2A)
 
 
 def keystroke(keys, old_keys, keys_flag):
@@ -69,12 +51,14 @@ def keystroke(keys, old_keys, keys_flag):
         return keys, keys_flag
 
     if old_keys != "Normal" and old_keys != "Stop":
-        keystroke_release(old_keys)
+        for key in old_keys.split('_'):
+            simulate_release(key)
 
     if keys == "Stop":
         keys_flag = False
     elif keys != "Normal":
-        keystroke_press(keys)
+        for key in keys.split('_'):
+            simulate_press(key)
     return keys, keys_flag
 
 
@@ -130,6 +114,9 @@ def pose_and_play(log_path, model_path, camera_port=0, queue_size=5, movenet_mod
     movenet, input_size = load_movenet_model("movenet_"+movenet_model)
     crop_region = init_crop_region(IMG_SIZE[0], IMG_SIZE[1])
     camera = cv2.VideoCapture(camera_port)
+    if get_numlock_state():  # set numlock as not pressed
+        PressKey(0x45)
+        ReleaseKey(0x45)
     start = time.time()
     num_frames = predict_poses(class_names, model, movenet, input_size, crop_region, camera, queue_size)
     end = time.time()
@@ -170,7 +157,7 @@ def pose_and_print(log_path, model_path, camera_port=0, queue_size=5, movenet_mo
         model_input[0][0][:, :2] *= image_height
         model_input = feature_engineering(model_input)
         predict_frame = np.expand_dims(model_input, axis=0)
-        predict_frame = [predict_frame for _ in range(5)]
+        predict_frame = [predict_frame for _ in range(ENSEMBLE_SIZE)]
         prediction = model(predict_frame, training=False)
         predicted_class = np.argmax(prediction)
         predictions_lst.pop(0)
@@ -193,5 +180,5 @@ def pose_and_print(log_path, model_path, camera_port=0, queue_size=5, movenet_mo
 
 
 if __name__ == '__main__':
-    pose_and_print("logs/log2.txt", "saved_models/model2", camera_port=1, queue_size=5, movenet_model="thunder")
-    #pose_and_play("logs/log2.txt", "saved_models/model2", camera_port=1, queue_size=5, movenet_model="thunder")
+    pose_and_print("logs/log6.txt", "saved_models/model6", camera_port=1, queue_size=7, movenet_model="thunder")
+    #pose_and_play("logs/log7.txt", "saved_models/model7", camera_port=1, queue_size=7, movenet_model="thunder")
