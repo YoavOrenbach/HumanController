@@ -213,16 +213,24 @@ def move_mouse(x, y):
     ctypes.windll.user32.SendInput(1, ctypes.pointer(cmd), ctypes.sizeof(cmd))
 
 
+def get_numlock_state():
+    hllDll = ctypes.WinDLL("User32.dll")
+    VK_CAPITAL = 0x90
+    return hllDll.GetKeyState(VK_CAPITAL)
+
+
 if __name__ == '__main__':
-
-    press_dictionary = {'S': PressKey}
-
-    release_dictionary = {'S': ReleaseKey}
+    print(get_numlock_state())
+    if get_numlock_state():  # 1 means it is pressed so numbers will be printed, 0 means arrows
+        PressKey(0x45)
+        ReleaseKey(0x45)
+    print(get_numlock_state())
 
     for i in range(5):
+        PressKey(0x1F)
         time.sleep(2)
-        #press_dictionary['S'](keycode_dictionary['S'])
-        #ReleaseKey(0x1F)
+        ReleaseKey(0x1F)
+        time.sleep(2)
         # move down:
         #move_mouse(0, 100)
         # move right:
@@ -231,3 +239,4 @@ if __name__ == '__main__':
         #move_mouse(-100, 0)
         # move up:
         #move_mouse(0, -100)
+
