@@ -260,11 +260,9 @@ def calculate_metrics(model, model_input, predictions_lst, threshold, test_movem
 def evaluate_model_threshold(model_name, pose_estimation_model, threshold, queue_size, test_dir, test_movements,
                              test_pose_switches, ml_model=False, ensemble=True, preprocessing=True, preprocess_name="video2"):
     if not ml_model:
-        #model = tf.keras.models.load_model("saved_models/"+model_name)
-        model = tf.keras.models.load_model(model_name)
+        model = tf.keras.models.load_model("saved_models/"+model_name)
     else:
-        #model = joblib.load(f'saved_models/{model_name}.joblib')
-        model = joblib.load(f'{model_name}.joblib')
+        model = joblib.load(f'saved_models/{model_name}.joblib')
     true_positive, true_negative, false_positive, false_negative = 0, 0, 0, 0
     predictions_lst = [-1] * queue_size
 
@@ -297,9 +295,11 @@ def evaluate_model_threshold(model_name, pose_estimation_model, threshold, queue
 def plot_model_metrics(model_name, pose_estimation_model, test_dir, test_movements, test_pose_switches,
                        ml_model=False, ensemble=True, preprocessing=True, preprocess_name="video2"):
     accuracy_list, precision_list, recall_list, F1_list = [], [], [], []
-    thresholds = [0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]
-    queue_size = 4 if preprocess_name == "video2" else 2
-    for threshold in thresholds:
+    #thresholds = [0.5, 0.6, 0.7, 0.8, 0.9, 0.95, 0.99]
+    #queue_size = 4 if preprocess_name == "video2" else 2
+    threshold = 0.9
+    thresholds = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    for queue_size in thresholds:
         accuracy, precision, recall, F1_score = \
             evaluate_model_threshold(model_name, pose_estimation_model, threshold, queue_size, test_dir, test_movements,
                                      test_pose_switches, ml_model, ensemble, preprocessing, preprocess_name)
@@ -312,10 +312,10 @@ def plot_model_metrics(model_name, pose_estimation_model, test_dir, test_movemen
     plt.plot(thresholds, precision_list, label="precision")
     plt.plot(thresholds, recall_list, label="recall")
     plt.plot(thresholds, F1_list, label="F1 score")
-    plt.title(model_name + " metrics")
-    plt.ylabel("metric percentage")
-    plt.xlabel("threshold")
-    plt.legend(loc="lower left")
+    plt.title("Evaluation metrics scores as a function of the frame queue size")
+    plt.ylabel("Metric score")
+    plt.xlabel("Queue size")
+    plt.legend(loc="upper right")
     plt.grid()
     plt.show()
 
@@ -574,7 +574,7 @@ def fighting_users():
     plt.figure(figsize=(10, 6))
     plt.bar(players, accuracies, color='indianred')
     addlabels(players, accuracies)
-    plt.title("Fighting game poses accuracy of different players", fontweight='bold', fontsize=15)
+    plt.title("Fighting game poses accuracy of players when training on one user", fontweight='bold', fontsize=15)
     plt.xlabel("Different players", fontweight='bold', fontsize=15)
     plt.ylabel("Accuracy", fontweight='bold', fontsize=15)
     plt.show()
@@ -603,7 +603,7 @@ def gaming_tests():
                                                  "gaming_dataset/misc/test1-misc", misc_movements1, misc_pose_switches1,
                                                  ml_model=False, ensemble=True, preprocessing=True)
 
-    accuracies = [fps_acc, golf_acc, tennis_acc, bowling_acc, fps_acc, driving_acc, misc_acc]
+    accuracies = [fight_acc, golf_acc, tennis_acc, bowling_acc, fps_acc, driving_acc, misc_acc]
     games = ["Fighting game", "Golf game", "Tennis game", "Bowling game", "First Person\nShooter", "Driving Game", "Miscellaneous"]
     plt.figure(figsize=(12, 7))
     plt.bar(games, accuracies, color='slateblue')
@@ -614,14 +614,100 @@ def gaming_tests():
     plt.show()
 
 
+def final_pose_estimation_plot():
+    start = time.time()
+    thunder_accuracy, thunder_precision, thunder_recall, thunder_f1 = \
+        evaluate_model_threshold("movenet_ensemble/ensemble", "movenet_thunder", 0.9, 4, "test_video/test2-long", test2_movements,
+                                 test2_pose_switches, ml_model=False, preprocessing=True, preprocess_name="video2")
+    end = time.time()
+    thunder_fps = len(os.listdir("test_video/test2-long"))/(end - start)
+
+    start = time.time()
+    blazepose_accuracy, blazepose_precision, blazepose_recall, blazepose_f1 = \
+        evaluate_model_threshold("blazepose_ensemble/ensemble", "blazepose", 0.9, 4, "test_video/test2-long", test2_movements,
+                                 test2_pose_switches, ml_model=False, preprocessing=True, preprocess_name="video2")
+    end = time.time()
+    blazepose_fps = len(os.listdir("test_video/test2-long"))/(end - start)
+
+    start = time.time()
+    lightning_accuracy, lightning_precision, lightning_recall, lightning_f1 = \
+        evaluate_model_threshold("movenet_ensemble/ensemble", "movenet_lightning", 0.9, 4, "test_video/test2-long", test2_movements,
+                                 test2_pose_switches, ml_model=False, preprocessing=True, preprocess_name="video2")
+    end = time.time()
+    lightning_fps = len(os.listdir("test_video/test2-long"))/(end - start)
+
+    thunder = [thunder_accuracy, thunder_precision, thunder_recall, thunder_f1, thunder_fps]
+    blazepose = [blazepose_accuracy, blazepose_precision, blazepose_recall, blazepose_f1, blazepose_fps]
+    lightning = [lightning_accuracy, lightning_precision, lightning_recall, lightning_f1, lightning_fps]
+
+    bar_width = 1/4
+    plt.subplots(figsize=(10, 8))
+
+    # Set position of bar on X axis
+    br1 = np.arange(len(thunder))
+    br2 = [x + bar_width for x in br1]
+    br3 = [x + bar_width for x in br2]
+
+    plt.bar(br1, thunder, color='dodgerblue', width=bar_width, edgecolor='grey', label='Movenet Thunder')
+    for i in range(len(thunder)):
+        plt.text(i, thunder[i], "{:.2f}".format(thunder[i]), ha='center')
+    plt.bar(br2, blazepose, color='tomato', width=bar_width, edgecolor='grey', label='Blazepose')
+    for i in range(len(blazepose)):
+        plt.text(i+0.25, blazepose[i], "{:.2f}".format(blazepose[i]), ha='center')
+    plt.bar(br3, lightning, color='gold', width=bar_width, edgecolor='grey', label='Movenet lightning')
+    for i in range(len(lightning)):
+        plt.text(i+0.5, lightning[i], "{:.2f}".format(lightning[i]), ha='center')
+
+    # Adding Xticks
+    plt.title('Pose estimation models scores on a test set', fontweight='bold', fontsize=15)
+    plt.xlabel('Metrics', fontweight='bold', fontsize=15)
+    plt.ylabel('Metric score', fontweight='bold', fontsize=15)
+    plt.xticks([r + bar_width for r in range(len(thunder))], ['Accuracy', 'Precision', 'Recall', 'F1-score', 'FPS'])
+    plt.ylim([0, 100])
+    plt.legend()
+    plt.show()
+
+
+def final_gaming_plot():
+    one_user_train = [79.56, 77.09, 90.68, 81.57, 73.45, 65.04, 64.90, 66.10, 63.50, 92.08]
+    two_user_train = [86.70, 77.97, 92.13, 80.10, 89.38, 80.44, 73.08, 78.06, 71.69, 93.48]
+    three_user_train = [83.25, 76.65, 91.30, 79.85, 88.94, 75.06, 83.17, 83.76, 79.14, 92.08]
+
+    bar_width = 1/4
+    plt.subplots(figsize=(18, 10))
+
+    # Set position of bar on X axis
+    br1 = np.arange(len(one_user_train))
+    br2 = [x + bar_width for x in br1]
+    br3 = [x + bar_width for x in br2]
+
+    plt.bar(br1, one_user_train, color='orangered', width=bar_width, edgecolor='grey', label='Training on one user poses')
+    for i in range(len(one_user_train)):
+        plt.text(i, one_user_train[i], "{:.1f}".format(one_user_train[i]), ha='center')
+    plt.bar(br2, two_user_train, color='limegreen', width=bar_width, edgecolor='grey', label='Training on two users poses')
+    for i in range(len(two_user_train)):
+        plt.text(i+0.25, two_user_train[i], "{:.1f}".format(two_user_train[i]), ha='center')
+    plt.bar(br3, three_user_train, color='cornflowerblue', width=bar_width, edgecolor='grey', label='Training on three users poses')
+    for i in range(len(three_user_train)):
+        plt.text(i+0.5, three_user_train[i], "{:.1f}".format(three_user_train[i]), ha='center')
+
+    # Adding Xticks
+    plt.title('Accuracy of new players when training on other users', fontweight='bold', fontsize=24)
+    plt.xlabel('G3D dataset players', fontweight='bold', fontsize=24)
+    plt.ylabel('Pose accuracy', fontweight='bold', fontsize=24)
+    plt.xticks([r + bar_width for r in range(len(one_user_train))], ['Player ' + str(i) for i in range(1, 11)], fontsize=16)
+    plt.yticks(fontsize=16)
+    plt.ylim([0, 100])
+    plt.legend(fontsize=14, bbox_to_anchor=(1.13, 1.1))
+    plt.show()
+
+
 if __name__ == '__main__':
-    """
-    accuracy_dic = evaluate_model("movenet_ensemble_test/ensemble", "movenet", movenet_preprocess_data,
+
+    accuracy_dic = evaluate_model("movenet_ensemble/ensemble", "movenet", movenet_preprocess_data,
                                   ml_model=False, ensemble=True, preprocessing=False)
-    results_bar_plot("movenet ensemble Nadam", accuracy_dic)
+    results_bar_plot("movenet ensemble", accuracy_dic)
     
-    evaluate_model_threshold("movenet", "movenet", 0.9, 4, "test_video/test2-long", test2_movements,
-                             test2_pose_switches, ml_model=False, ensemble=False, preprocessing=False, preprocess_name="video2")
-    """
-    fighting_users()
-    gaming_tests()
+    evaluate_model_threshold("movenet_ensemble/ensemble", "movenet", 0.9, 4, "test_video/test2-long", test2_movements,
+                             test2_pose_switches, ml_model=False, ensemble=True, preprocessing=False, preprocess_name="video2")
+
