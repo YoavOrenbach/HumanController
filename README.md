@@ -9,11 +9,16 @@
   <p align="center">
     Playing video games with body poses
     <br />
-    <a href="https://youtu.be/v1qBOf-l7nQ"><strong>Demo video</strong></a>
+    <a href="https://youtu.be/IPQhQQrVtcg"><strong>Demo video</strong></a>
+    ·
+    <a href="https://youtu.be/IGle3bZDcw8"><strong>Extended video</strong></a>
     <br />
   </p>
 </div>
 
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/80704907/154738336-7d4aa904-3f71-43cc-b7b7-f2b467988a45.gif" alt="animated" />
+</p>
 
 <!-- TABLE OF CONTENTS -->
 <details>
@@ -30,6 +35,7 @@
      </ul>
    </li>
    <li><a href="#usage">Usage</a></li>
+   <li><a href="#acknowledgments">Acknowledgments</a></li>
   </ol>
 </details>
 
@@ -78,15 +84,18 @@ In order to use Human Controller you will need to have:
 
 There are 3 steps in order to use Human Controller:
 1. Take poses you would like to use in game and map them to any keyboard or mouse input.
-2. Train a model to predict your poses (takes between 5-7 minutes).
+2. Train a model to predict your poses (takes about 0.5x+2 minutes where x is the number of poses).
 3. Press play to start playing and let the app run in the background while your game runs.
 
-#### Demo gif playing hades with our poses  
-![hades_intro_gif](https://user-images.githubusercontent.com/80704907/154738336-7d4aa904-3f71-43cc-b7b7-f2b467988a45.gif)
-
 #### GUI example:
+<p align="center">
+  <img width="670" alt="gui" src="https://user-images.githubusercontent.com/80704907/171219083-595c3876-108f-4413-ac08-6dcbfca51d3c.png"/>
+</p>
 
-![gui_ver2_small](https://user-images.githubusercontent.com/80704907/156357246-df3913bf-a230-4fb2-9593-99f9f02d2fc8.png)
+<p align="right">(<a href="#top">back to top</a>)</p>
 
+## Acknowledgments
+
+We wish to thank our mentor Omri Avrahami for his guidance and support at any time.
 
 <p align="right">(<a href="#top">back to top</a>)</p>
