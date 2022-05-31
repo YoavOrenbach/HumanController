@@ -1,5 +1,4 @@
 import tensorflow as tf
-from keras.layers.merge import concatenate
 import numpy as np
 from sklearn.model_selection import train_test_split
 import os
@@ -73,7 +72,7 @@ def define_stacked_model(members, num_classes):
             layer._name = 'ensemble_' + str(i+1) + '_' + layer.name
     ensemble_visible = [model.input for model in members]
     ensemble_outputs = [model.output for model in members]
-    merge = concatenate(ensemble_outputs)
+    merge = tf.keras.layers.concatenate(ensemble_outputs)
     hidden = tf.keras.layers.Dense(64, activation='relu', kernel_initializer=tf.keras.initializers.HeNormal())(merge)
     output = tf.keras.layers.Dense(num_classes, activation='softmax')(hidden)
     model = tf.keras.Model(inputs=ensemble_visible, outputs=output)

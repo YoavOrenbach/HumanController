@@ -6,7 +6,6 @@ from matplotlib import pyplot as plt
 from movenet_utils import load_movenet_model, movenet_inference, feature_engineering, landmarks_to_embedding
 from movenet_utils import movenet_inference_video, init_crop_region, determine_crop_region
 from tqdm import tqdm
-from keras.layers.merge import concatenate
 #from tensorflow.keras.utils import plot_model
 #os.environ["PATH"] += os.pathsep + 'E:/school/Graphviz/bin/'
 
@@ -212,7 +211,7 @@ def define_stacked_model(members, num_classes):
     ensemble_visible = [model.input for model in members]
     # concatenate merge output from each model
     ensemble_outputs = [model.output for model in members]
-    merge = concatenate(ensemble_outputs)
+    merge = tf.keras.layers.concatenate(ensemble_outputs)
     hidden = tf.keras.layers.Dense(64, activation='relu', kernel_initializer=tf.keras.initializers.HeNormal())(merge)
     output = tf.keras.layers.Dense(num_classes, activation='softmax')(hidden)
     model = tf.keras.Model(inputs=ensemble_visible, outputs=output)

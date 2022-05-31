@@ -1,4 +1,3 @@
-import time
 import ctypes
 
 # scan codes: http://www.flint.jp/misc/?q=dik&lang=en
