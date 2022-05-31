@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 LEARNING_RATE = 0.001
 IMG_SIZE = (256, 256)
-ENSEMBLE_SIZE = 5
+ENSEMBLE_SIZE = 3
 
 
 def preprocess_data(data_directory):
@@ -96,7 +96,3 @@ def controller_model(data_directory, model_directory):
     ensemble_X_val = [X_val for _ in range(ENSEMBLE_SIZE)]
     train_model(meta_learner, ensemble_X_train, ensemble_X_val, y_train, y_val, patience=10)
     meta_learner.save(model_directory+"/ensemble")
-
-
-if __name__ == '__main__':
-    controller_model("datasets/dataset1", "saved_models/model1")

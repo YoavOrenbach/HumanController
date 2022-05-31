@@ -177,8 +177,3 @@ def pose_and_print(log_path, model_path, camera_port=0, queue_size=5, movenet_mo
     seconds = end - start
     fps = num_frames / seconds
     print("Estimated frames per second : {0}".format(fps))
-
-
-if __name__ == '__main__':
-    pose_and_print("logs/log6.txt", "saved_models/model6", camera_port=1, queue_size=7, movenet_model="thunder")
-    #pose_and_play("logs/log7.txt", "saved_models/model7", camera_port=1, queue_size=7, movenet_model="thunder")

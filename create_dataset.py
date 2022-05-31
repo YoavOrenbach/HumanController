@@ -3,9 +3,8 @@ from cv2 import cv2
 import os
 import time
 
-#useful link:
-# https://www.analyticsvidhya.com/blog/2021/05/create-your-own-image-dataset-using-opencv-in-machine-learning/
 IMG_SIZE = (256, 256)
+DATA_SIZE = 300
 
 
 def create_data_folder(data):
@@ -32,7 +31,7 @@ def pose_timer(camera, timer=5):
 
 
 def save_pose_data(camera, key, data_folder="dataset", count=0):
-    for index in range(300):
+    for index in range(DATA_SIZE):
         status, frame = camera.read()
         frame = cv2.flip(frame, 1)
         cv2.imshow("preview", frame)
@@ -44,7 +43,7 @@ def save_pose_data(camera, key, data_folder="dataset", count=0):
 
 
 def collect_key_data(key, camera_port=0, data_folder="dataset", timer=5, count=0):
-    create_data_folder(data_folder)
+    #create_data_folder(data_folder)
     cv2.namedWindow("preview")
     camera = cv2.VideoCapture(camera_port, cv2.CAP_DSHOW)
     create_data_folder(data_folder + "/" + key)
@@ -61,13 +60,9 @@ def choose_keys(data_folder="dataset"):
         key_input = input("please enter the key you want to train or type exit if you are finished: ")
 
 
-def test_data():
-    create_data_folder("testDataset")
+def test_data(test_data_folder="test_dataset"):
+    create_data_folder(test_data_folder)
     test_input = input("please enter the test folder or type exit if you are finished: ")
     while test_input != "exit":
-        choose_keys("testDataset" + "/" + test_input)
+        choose_keys(test_data_folder + "/" + test_input)
         test_input = input("please enter the test folder or type exit if you are finished: ")
-
-
-if __name__ == '__main__':
-    test_data()

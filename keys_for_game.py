@@ -217,26 +217,3 @@ def get_numlock_state():
     hllDll = ctypes.WinDLL("User32.dll")
     VK_CAPITAL = 0x90
     return hllDll.GetKeyState(VK_CAPITAL)
-
-
-if __name__ == '__main__':
-    print(get_numlock_state())
-    if get_numlock_state():  # 1 means it is pressed so numbers will be printed, 0 means arrows
-        PressKey(0x45)
-        ReleaseKey(0x45)
-    print(get_numlock_state())
-
-    for i in range(5):
-        PressKey(0x1F)
-        time.sleep(2)
-        ReleaseKey(0x1F)
-        time.sleep(2)
-        # move down:
-        #move_mouse(0, 100)
-        # move right:
-        #move_mouse(100, 0)
-        # move left:
-        #move_mouse(-100, 0)
-        # move up:
-        #move_mouse(0, -100)
-
