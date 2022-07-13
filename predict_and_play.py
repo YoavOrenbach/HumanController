@@ -1,15 +1,14 @@
 import numpy as np
-import tensorflow as tf
 from cv2 import cv2
 import time
-from pose_estimation_utils import load_movenet_model, movenet_inference_video, init_crop_region, \
-    determine_crop_region, feature_engineering
-from keys_for_game import keycodes, mouse_codes, wheel_codes, movement_codes,\
+from keys_for_game import keycodes, mouse_codes, wheel_codes, movement_codes, \
     PressKey, ReleaseKey, mouse_click, wheel_movement, move_mouse, get_numlock_state
+from pose_estimation_models.pose_estimation_logic import PoseEstimationLogic
+from feature_engineering.feature_engineering_logic import FeatureEngineering
+from classifiers.classifier_logic import Classifier
 
 IMG_SIZE = (256, 256)
 THRESHOLD = 0.9
-ENSEMBLE_SIZE = 3
 SPECIAL_KEYS = ['Home', 'Up', 'PageUp', 'Left', 'Right', 'End', 'Down', 'PageDown', 'Insert', 'Delete']
 
 
@@ -62,29 +61,27 @@ def keystroke(keys, old_keys, keys_flag):
     return keys, keys_flag
 
 
-def predict_single_pose(camera, model, movenet, input_size, crop_region):
+def predict_single_pose(camera, pose_estimation_model: PoseEstimationLogic,
+                        feature_engineering: FeatureEngineering, classifier: Classifier):
     status, frame = camera.read()
     frame = cv2.flip(frame, 1)
     image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     image = cv2.resize(image, IMG_SIZE)
-    predict_frame = movenet_inference_video(movenet, image, crop_region, crop_size=[input_size, input_size])
-    crop_region = determine_crop_region(predict_frame, IMG_SIZE[0], IMG_SIZE[1])
-    predict_frame[0][0][:, :2] *= IMG_SIZE[0]
-    predict_frame = feature_engineering(predict_frame)
-    predict_frame = np.expand_dims(predict_frame, axis=0)
-    model_input = [predict_frame for _ in range(ENSEMBLE_SIZE)]
-    prediction = model(model_input, training=False)
-    return prediction, crop_region
+    landmarks = pose_estimation_model.process_frame(image)
+    model_input = feature_engineering(landmarks)
+    prediction = classifier.predict(model_input)
+    return prediction
 
 
-def predict_poses(class_names, model, movenet, input_size, crop_region, camera, queue_size):
+def predict_poses(class_names, pose_estimation_model: PoseEstimationLogic,
+                  feature_engineering: FeatureEngineering, classifier: Classifier, camera, queue_size):
     keys_flag = True
     num_frames = 0
     predictions_lst = [-1] * queue_size
 
     # Warm-up and predicting first key
     while True:
-        first_prediction, crop_region = predict_single_pose(camera, model, movenet, input_size, crop_region)
+        first_prediction = predict_single_pose(camera, pose_estimation_model, feature_engineering, classifier)
         predicted_class = np.argmax(first_prediction)
         old_keys = class_names[predicted_class]
         predictions_lst.pop(0)
@@ -97,7 +94,7 @@ def predict_poses(class_names, model, movenet, input_size, crop_region, camera, 
         keys_flag = False
 
     while keys_flag:
-        prediction, crop_region = predict_single_pose(camera, model, movenet, input_size, crop_region)
+        prediction = predict_single_pose(camera, pose_estimation_model, feature_engineering, classifier)
         predicted_class = np.argmax(prediction)
         predictions_lst.pop(0)
         predictions_lst.append(predicted_class)
@@ -108,18 +105,20 @@ def predict_poses(class_names, model, movenet, input_size, crop_region, camera, 
     return num_frames
 
 
-def pose_and_play(log_path, model_path, camera_port=0, queue_size=5, movenet_model="thunder"):
+def pose_and_play(log_path, model_path, pose_estimation_model: PoseEstimationLogic,
+                  feature_engineering: FeatureEngineering, classifier: Classifier, camera_port=0, queue_size=5):
+    classifier.load(model_path)
     class_names = find_class_names(log_path)
-    model = tf.keras.models.load_model(model_path+"/ensemble")
-    movenet, input_size = load_movenet_model("movenet_"+movenet_model)
-    crop_region = init_crop_region(IMG_SIZE[0], IMG_SIZE[1])
+    pose_estimation_model.load_model()
+    pose_estimation_model.start()
     camera = cv2.VideoCapture(camera_port)
     if get_numlock_state():  # set numlock as not pressed
         PressKey(0x45)
         ReleaseKey(0x45)
     start = time.time()
-    num_frames = predict_poses(class_names, model, movenet, input_size, crop_region, camera, queue_size)
+    num_frames = predict_poses(class_names, pose_estimation_model, feature_engineering, classifier, camera, queue_size)
     end = time.time()
+    pose_estimation_model.end()
     camera.release()
     cv2.destroyAllWindows()
     seconds = end - start
@@ -136,12 +135,12 @@ def find_pose_names(log_path):
     return class_names
 
 
-def pose_and_print(log_path, model_path, camera_port=0, queue_size=5, movenet_model="thunder"):
-    model = tf.keras.models.load_model(model_path+"/ensemble")
+def pose_and_print(log_path, model_path, pose_estimation_model: PoseEstimationLogic,
+                   feature_engineering: FeatureEngineering, classifier: Classifier, camera_port=0, queue_size=5):
+    classifier.load(model_path)
     class_names = find_pose_names(log_path)
-    image_height, image_width = IMG_SIZE[0], IMG_SIZE[1]
-    movenet, input_size = load_movenet_model("movenet_"+movenet_model)
-    crop_region = init_crop_region(image_height, image_width)
+    pose_estimation_model.load_model()
+    pose_estimation_model.start()
     predictions_lst = [-1] * queue_size
     camera = cv2.VideoCapture(camera_port)
     num_frames = 0
@@ -152,17 +151,13 @@ def pose_and_print(log_path, model_path, camera_port=0, queue_size=5, movenet_mo
         frame = cv2.flip(frame, 1)
         image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         image = cv2.resize(image, IMG_SIZE)
-        model_input = movenet_inference_video(movenet, image, crop_region, crop_size=[input_size, input_size])
-        crop_region = determine_crop_region(model_input, image_height, image_width)
-        model_input[0][0][:, :2] *= image_height
-        model_input = feature_engineering(model_input)
-        predict_frame = np.expand_dims(model_input, axis=0)
-        predict_frame = [predict_frame for _ in range(ENSEMBLE_SIZE)]
-        prediction = model(predict_frame, training=False)
+        landmarks = pose_estimation_model.process_frame(image)
+        model_input = feature_engineering(landmarks)
+        prediction = classifier.predict(model_input)
         predicted_class = np.argmax(prediction)
         predictions_lst.pop(0)
         predictions_lst.append(predicted_class)
-        if np.max(prediction) > 0.9 and predictions_lst.count(predictions_lst[0]) == len(predictions_lst):
+        if np.max(prediction) > THRESHOLD and predictions_lst.count(predictions_lst[0]) == len(predictions_lst):
             font = cv2.FONT_HERSHEY_SIMPLEX
             cv2.putText(frame, class_names[predicted_class], (50, 250), font, 3, (255, 0, 0), 4, cv2.LINE_AA)
         num_frames = num_frames + 1
@@ -172,8 +167,10 @@ def pose_and_print(log_path, model_path, camera_port=0, queue_size=5, movenet_mo
             break
 
     end = time.time()
+    pose_estimation_model.end()
     camera.release()
     cv2.destroyAllWindows()
     seconds = end - start
     fps = num_frames / seconds
     print("Estimated frames per second : {0}".format(fps))
+

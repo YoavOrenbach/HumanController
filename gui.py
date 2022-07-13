@@ -12,6 +12,9 @@ import re
 from create_dataset import collect_key_data, create_data_folder
 from train_model import controller_model
 from predict_and_play import pose_and_play, pose_and_print
+from pose_estimation_models.pose_estimation_logic import PoseEstimationLogic
+from feature_engineering.feature_engineering_logic import FeatureEngineering
+from classifiers.classifier_logic import Classifier
 
 
 KEYS = [
@@ -147,7 +150,8 @@ class Pose:
 
 
 class Controller:
-    def __init__(self, root, tab_id):
+    def __init__(self, root, tab_id, pose_estimation_model: PoseEstimationLogic,
+                 feature_engineering: FeatureEngineering, classifier: Classifier):
         # class members:
         self.root = root
         self.webcam_variable = None
@@ -155,14 +159,19 @@ class Controller:
         self.tree = None
         self.timer = tk.IntVar()
         self.timer.set(5)
-        self.movenet_model = tk.StringVar()
         self.queue_frames = tk.IntVar()
         self.queue_frames.set(5)
         self.images = []
         self.selected_keys = []
         self.dataset_path = "datasets/dataset" + str(tab_id)
         self.log_path = "logs/log" + str(tab_id) + ".txt"
-        self.model_path = "saved_models/model" + str(tab_id)
+        self.model_dir = "saved_models/model" + str(tab_id)
+        self.model_path = f'saved_models/model{str(tab_id)}/{pose_estimation_model.get_name()}_' \
+                          f'{feature_engineering.get_name()}_{classifier.get_name()}'
+        self.pose_estimation_model = pose_estimation_model
+        self.feature_engineering = feature_engineering
+        self.classifier = classifier
+        self.movenet_model = tk.StringVar()
 
         self.root.columnconfigure(0, weight=3)
         self.root.columnconfigure(1, weight=1)
@@ -254,6 +263,7 @@ class Controller:
         if not os.path.isfile(self.log_path):
             with open(self.log_path, 'w') as f:
                 f.writelines(["--not trained--\n", "1 Normal pose Normal\n", "2 Stop pose Stop\n"])
+        create_data_folder(self.model_dir)
         with open(self.log_path, 'r') as f:
             data = f.readlines()
         for i in range(1, len(data)):
@@ -612,7 +622,9 @@ class Controller:
             res = mb.askyesno("Train Question", msg)
         if res:
             mb.showinfo("Training", "Model is now training")
-            controller_model(data_directory=self.dataset_path, model_directory=self.model_path)
+            controller_model(data_directory=self.dataset_path, model_path=self.model_path,
+                             pose_estimation_model=self.pose_estimation_model,
+                             feature_engineering=self.feature_engineering, classifier=self.classifier)
             mb.showinfo("Finished", "Model is now ready!")
             with open(self.log_path, 'r') as f:
                 data = f.readlines()
@@ -621,15 +633,16 @@ class Controller:
                 f.writelines(data)
 
     def play(self):
-        model_msg = "You can choose between a more accurate model and a faster model"
-        ttk.Label(self.play_frame, text=model_msg).pack(anchor='w', padx=10, pady=5)
-        radio_frame = ttk.Frame(self.play_frame)
-        radio_frame.pack(padx=10)
-        thunder_button = ttk.Radiobutton(radio_frame, text="Accurate model", value="thunder", variable=self.movenet_model)
-        thunder_button.pack(side=tk.LEFT, expand=True, padx=10)
-        lightning_button = ttk.Radiobutton(radio_frame, text="Fast model", value="lightning",  variable=self.movenet_model)
-        lightning_button.pack(side=tk.LEFT, expand=True, padx=10)
-        self.movenet_model.set("thunder")
+        if self.pose_estimation_model.get_name() == "movenet":
+            model_msg = "You can choose between a more accurate model and a faster model"
+            ttk.Label(self.play_frame, text=model_msg).pack(anchor='w', padx=10, pady=5)
+            radio_frame = ttk.Frame(self.play_frame)
+            radio_frame.pack(padx=10)
+            thunder_button = ttk.Radiobutton(radio_frame, text="Accurate model", value="thunder", variable=self.movenet_model)
+            thunder_button.pack(side=tk.LEFT, expand=True, padx=10)
+            lightning_button = ttk.Radiobutton(radio_frame, text="Fast model", value="lightning",  variable=self.movenet_model)
+            lightning_button.pack(side=tk.LEFT, expand=True, padx=10)
+            self.movenet_model.set("thunder")
 
         play_msg = "Press Play to start playing games with your poses, or press test " \
                    "to see model predictions."
@@ -672,20 +685,28 @@ class Controller:
             mb.showerror("Play Error", keys_msg)
         else:
             camera_port = int(self.webcam_variable.get()[-1])
+            if self.pose_estimation_model.get_name() == "movenet":
+                self.pose_estimation_model.set_sub_model(self.movenet_model.get())
             try:
                 if not print_flag:
                     mb.showinfo("Playing", "Keys will now be pressed according to your poses")
-                    pose_and_play(self.log_path, self.model_path, camera_port, self.queue_frames.get(), self.movenet_model.get())
+                    pose_and_play(self.log_path, self.model_path, self.pose_estimation_model, self.feature_engineering,
+                                  self.classifier, camera_port, self.queue_frames.get())
                 else:
                     mb.showinfo("Testing", "Pose names will be printed according to your poses")
-                    pose_and_print(self.log_path, self.model_path, camera_port, self.queue_frames.get(), self.movenet_model.get())
+                    pose_and_print(self.log_path, self.model_path, self.pose_estimation_model, self.feature_engineering,
+                                   self.classifier, camera_port, self.queue_frames.get())
             except cv2.error as e:
                 mb.showerror("Webcam Error", "Webcam is not set properly")
+            if self.pose_estimation_model.get_name() == "movenet":
+                self.pose_estimation_model.set_sub_model("thunder")
 
     def update_index(self, tab_id):
         self.dataset_path = "datasets/dataset" + str(tab_id)
         self.log_path = "logs/log" + str(tab_id) + ".txt"
-        self.model_path = "saved_models/model" + str(tab_id)
+        self.model_dir = "saved_models/model" + str(tab_id)
+        self.model_path = f'saved_models/model{str(tab_id)}/{self.pose_estimation_model.get_name()}_' \
+                          f'{self.feature_engineering.get_name()}_{self.classifier.get_name()}'
 
 
 class Tab:
@@ -700,7 +721,8 @@ class Tab:
 
 
 class HumanControllerApp:
-    def __init__(self, root):
+    def __init__(self, root, pose_estimation_model: PoseEstimationLogic,
+                 feature_engineering: FeatureEngineering, classifier: Classifier):
         self.root = root
         self.heading()
         if not self.check_webcam():
@@ -709,6 +731,9 @@ class HumanControllerApp:
         self.notebook.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
         self.tabs = []
         self.add_lbl, self.add_button = None, None
+        self.pose_estimation_model = pose_estimation_model
+        self.feature_engineering = feature_engineering
+        self.classifier = classifier
         self.load_tabs()
         center(self.root)
 
@@ -761,7 +786,7 @@ class HumanControllerApp:
         self.add_tab()
 
     def controller_tab(self, tab):
-        tab.controller = Controller(tab.frame, tab.id)
+        tab.controller = Controller(tab.frame, tab.id, self.pose_estimation_model, self.feature_engineering, self.classifier)
         options_frame = ttk.LabelFrame(tab.frame, text="Controller options")
         options_frame.grid(row=0, column=1, sticky='nsew', padx=10, pady=10, ipady=5)
 
@@ -838,9 +863,6 @@ class HumanControllerApp:
         if os.path.isdir("saved_models/model"+str(tab.id)):
             shutil.rmtree("saved_models/model"+str(tab.id))
 
-        datasets = os.listdir("datasets")
-        logs = os.listdir("logs")
-        models = os.listdir("saved_models")
         if tab.id - 1 < len(self.tabs):
             for i in range(tab.id - 1, len(self.tabs)):
                 self.tabs[i].id -= 1
@@ -849,12 +871,12 @@ class HumanControllerApp:
                 self.notebook.tab(i, text=self.tabs[i].name)
                 self.tabs[i].controller.update_index(i+1)
 
-                if i < len(datasets) and os.path.isdir("datasets/"+datasets[i]):
-                    os.rename("datasets/"+datasets[i], "datasets/dataset" + str(i+1))
-                if i + 1 < len(logs) and os.path.isfile("logs/"+logs[i+1]):
-                    os.rename("logs/"+logs[i+1], "logs/log" + str(i+1) + ".txt")
-                if i < len(models) and os.path.isdir("saved_models/"+models[i]):
-                    os.rename("saved_models/"+models[i], "saved_models/model" + str(i+1))
+                if os.path.isdir("datasets/dataset" + str(i+2)):
+                    os.rename("datasets/dataset" + str(i+2), "datasets/dataset" + str(i+1))
+                if os.path.isfile("logs/log" + str(i+2) + ".txt"):
+                    os.rename("logs/log" + str(i+2) + ".txt", "logs/log" + str(i+1) + ".txt")
+                if os.path.isdir("saved_models/model" + str(i+2)):
+                    os.rename("saved_models/model" + str(i+2), "saved_models/model" + str(i+1))
 
         if self.tabs:
             with open('logs/general_log.txt', 'w') as f:
@@ -945,8 +967,8 @@ def all_pose_images(pose_dir):
     win.protocol("WM_DELETE_WINDOW", lambda: close_window(win))
 
 
-if __name__ == '__main__':
+def app(pose_estimation_model: PoseEstimationLogic, feature_engineering: FeatureEngineering, classifier: Classifier):
     #root_gui = tk.Tk()
     root_gui = ttk.Window(themename="darkly")
-    HumanControllerApp(root_gui)
+    HumanControllerApp(root_gui, pose_estimation_model, feature_engineering, classifier)
     root_gui.mainloop()
