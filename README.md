@@ -70,9 +70,9 @@ In order to use Human Controller you will need to have:
    ```sh
    pip install requirements.txt
    ```
-3. Run gui.py to use the app
+3. Run main.py to use the app
    ```sh
-   python gui.py
+   python main.py
    ```
 
 <p align="right">(<a href="#top">back to top</a>)</p>
