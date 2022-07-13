@@ -29,7 +29,7 @@ classifier_dic = {
     "attention": Attention,
     "visionTransformer": VisionTransformer,
     "ensemble": StackedEnsemble,
-    "avgEnsemble": AvgEnsemble
+    "ensembleAvg": AvgEnsemble
 }
 
 impossible_combinations = [

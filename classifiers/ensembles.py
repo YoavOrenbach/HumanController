@@ -47,8 +47,8 @@ class StackedEnsemble(DLClassifier):
         
 
 class AvgEnsemble(DLClassifier):
-    def __int__(self):
-        super(AvgEnsemble, self).__init__("EnsembleAvg")
+    def __init__(self):
+        super(AvgEnsemble, self).__init__("ensembleAvg")
         self.input_size = None
         self.output_size = None
 
@@ -62,13 +62,13 @@ class AvgEnsemble(DLClassifier):
         ensemble_output = tf.keras.layers.Average()(model_outputs)
         self.model = tf.keras.Model(inputs=model_input, outputs=ensemble_output)
 
-    def train_model(self, X, y, optimizer="Adam", patience=30):
+    def train_model(self, X_train, X_val, y_train, y_val, optimizer="Adam", patience=30):
         sub_models = []
         for i in range(ENSEMBLE_SIZE):
             mlp = MLP()
             mlp.define_model(self.input_size, self.output_size, initializer=tf.keras.initializers.HeNormal())
-            mlp.train_model(X, y, optimizer="Nadam")
+            mlp.train_model(X_train, X_val, y_train, y_val, optimizer="Nadam")
             mlp.model._name = 'model' + str(i)
             sub_models.append(mlp.model)
         self.define_ensemble(sub_models)
-        super().train_model(X, y, patience=10)
+        super().train_model(X_train, X_val, y_train, y_val, patience=10)

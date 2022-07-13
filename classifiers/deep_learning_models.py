@@ -6,7 +6,7 @@ from classifiers.classifier_logic import Classifier
 
 
 class DLClassifier(Classifier):
-    def __init__(self, model_name=""):
+    def __init__(self, model_name):
         super(DLClassifier, self).__init__(model_name)
 
     @abstractmethod
