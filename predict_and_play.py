@@ -3,7 +3,7 @@ from cv2 import cv2
 import time
 from keys_for_game import keycodes, mouse_codes, wheel_codes, movement_codes, \
     PressKey, ReleaseKey, mouse_click, wheel_movement, move_mouse, get_numlock_state
-from pose_estimation_models.pose_estimation_logic import PoseEstimationLogic
+from pose_estimation_models.pose_estimation_logic import PoseEstimation
 from feature_engineering.feature_engineering_logic import FeatureEngineering
 from classifiers.classifier_logic import Classifier
 
@@ -13,6 +13,11 @@ SPECIAL_KEYS = ['Home', 'Up', 'PageUp', 'Left', 'Right', 'End', 'Down', 'PageDow
 
 
 def find_class_names(log_path):
+    """
+    This function finds the class names (the keys) in the given log path.
+    :param log_path: the log path containing triplets of [pose_id, pose_name, keys]
+    :return: the class names (keys).
+    """
     with open(log_path, 'r') as f:
         data = f.readlines()
     class_names = []
@@ -22,6 +27,11 @@ def find_class_names(log_path):
 
 
 def simulate_press(key):
+    """
+    This function simulates a key press according to the given key.
+    :param key: a string representing keys. It it starts with mouse then it is a mouse event,
+    otherwise it is a keyboard event.
+    """
     if "mouse" in key:
         if "click" in key:
             mouse_click(mouse_codes[key][0])
@@ -36,6 +46,11 @@ def simulate_press(key):
 
 
 def simulate_release(key):
+    """
+    This function simulates a key press according to the given key.
+    :param key: a string representing a key. It it starts with mouse then it is a mouse event,
+    otherwise it is a keyboard event.
+    """
     if "mouse" in key:
         if "click" in key:
             mouse_click(mouse_codes[key][1])
@@ -46,6 +61,14 @@ def simulate_release(key):
 
 
 def keystroke(keys, old_keys, keys_flag):
+    """
+    This function creates keystrokes according to the old keys that are being pressed and the
+     current keys that should be pressed.
+    :param keys: the current keys to simulate a press for.
+    :param old_keys: the previous keys that should be released.
+    :param keys_flag: a flag for stopping execution if the pose is a Stop pose.
+    :return: the new keys pressed and the keys_flag.
+    """
     if keys == old_keys:
         return keys, keys_flag
 
@@ -61,8 +84,16 @@ def keystroke(keys, old_keys, keys_flag):
     return keys, keys_flag
 
 
-def predict_single_pose(camera, pose_estimation_model: PoseEstimationLogic,
+def predict_single_pose(camera, pose_estimation_model: PoseEstimation,
                         feature_engineering: FeatureEngineering, classifier: Classifier):
+    """
+    This function predicts a pose from a single frame.
+    :param camera: The video capture device to read the frames.
+    :param pose_estimation_model: the pose estimation model to extract keypoints.
+    :param feature_engineering: the feature engineering methods used to process keypoints.
+    :param classifier: The classifier that classifies the processed input.
+    :return: The predicted class by the classifier.
+    """
     status, frame = camera.read()
     frame = cv2.flip(frame, 1)
     image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -73,8 +104,19 @@ def predict_single_pose(camera, pose_estimation_model: PoseEstimationLogic,
     return prediction
 
 
-def predict_poses(class_names, pose_estimation_model: PoseEstimationLogic,
+def predict_poses(class_names, pose_estimation_model: PoseEstimation,
                   feature_engineering: FeatureEngineering, classifier: Classifier, camera, queue_size):
+    """
+    This function is the main driver of the simulation - it predicts the poses and simulates the corresponding
+    key presses.
+    :param class_names: the keys mapped to every pose.
+    :param pose_estimation_model: the pose estimation model to extract keypoints.
+    :param feature_engineering: the feature engineering methods used to process keypoints.
+    :param classifier: The classifier that classifies the processed input.
+    :param camera: The video capture device to read the frames.
+    :param queue_size: the queue size for simulating a keypress only when the queue is full.
+    :return: the number of frames that were processed.
+    """
     keys_flag = True
     num_frames = 0
     predictions_lst = [-1] * queue_size
@@ -105,8 +147,19 @@ def predict_poses(class_names, pose_estimation_model: PoseEstimationLogic,
     return num_frames
 
 
-def pose_and_play(log_path, model_path, pose_estimation_model: PoseEstimationLogic,
+def pose_and_play(log_path, model_path, pose_estimation_model: PoseEstimation,
                   feature_engineering: FeatureEngineering, classifier: Classifier, camera_port=0, queue_size=5):
+    """
+    This function sets and loads the models, and starts predicting poses and simulating keys.
+    In the end this function prints the FPS of playing with poses.
+    :param log_path: given log path to find the class names.
+    :param model_path: the classifier model path.
+    :param pose_estimation_model: the pose estimation model to extract keypoints.
+    :param feature_engineering: the feature engineering methods used to process keypoints.
+    :param classifier: The classifier that classifies the processed input.
+    :param camera_port: the port of the webcam used.
+    :param queue_size: the queue size for simulating a keypress only when the queue is full.
+    """
     classifier.load(model_path)
     class_names = find_class_names(log_path)
     pose_estimation_model.load_model()
@@ -127,6 +180,11 @@ def pose_and_play(log_path, model_path, pose_estimation_model: PoseEstimationLog
 
 
 def find_pose_names(log_path):
+    """
+    This function finds the pose names in the given log path.
+    :param log_path: the log path containing triplets of [pose_id, pose_name, keys]
+    :return: the pose names.
+    """
     with open(log_path, 'r') as f:
         data = f.readlines()
     class_names = []
@@ -135,8 +193,19 @@ def find_pose_names(log_path):
     return class_names
 
 
-def pose_and_print(log_path, model_path, pose_estimation_model: PoseEstimationLogic,
+def pose_and_print(log_path, model_path, pose_estimation_model: PoseEstimation,
                    feature_engineering: FeatureEngineering, classifier: Classifier, camera_port=0, queue_size=5):
+    """
+    This function is the same as pose_and_play, but instead of simulating keypresses it prints the poses names to
+    the opencv window. Used by users for testing the system.
+    :param log_path: given log path to find the class names.
+    :param model_path: the classifier model path.
+    :param pose_estimation_model: the pose estimation model to extract keypoints.
+    :param feature_engineering: the feature engineering methods used to process keypoints.
+    :param classifier: The classifier that classifies the processed input.
+    :param camera_port: the port of the webcam used.
+    :param queue_size: the queue size for simulating a keypress only when the queue is full.
+    """
     classifier.load(model_path)
     class_names = find_pose_names(log_path)
     pose_estimation_model.load_model()

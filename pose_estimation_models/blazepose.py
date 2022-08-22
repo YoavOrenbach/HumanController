@@ -1,20 +1,24 @@
-from pose_estimation_models.pose_estimation_logic import PoseEstimationLogic
+from pose_estimation_models.pose_estimation_logic import PoseEstimation
 from mediapipe.python.solutions import pose as mp_pose
 import numpy as np
 
 
-class BlazePose(PoseEstimationLogic):
+class BlazePose(PoseEstimation):
+    """A BlazePose class extending the PoseEstimation class"""
     def __init__(self):
         super(BlazePose, self).__init__("blazepose")
         self.pose_tracker = None
 
     def load_model(self):
+        """Loads the pose estimation model - no need to load anything for BlazePose."""
         pass
 
     def start(self):
+        """Starts the pose estimation model's run, e.g., resetting the model after every process run."""
         self.pose_tracker = mp_pose.Pose()
 
     def process_frame(self, frame):
+        """Process a frame to produce keypoints."""
         result = self.pose_tracker.process(image=frame)
         pose_landmarks = result.pose_landmarks
         if pose_landmarks is not None:
@@ -23,9 +27,11 @@ class BlazePose(PoseEstimationLogic):
         return pose_landmarks
     
     def end(self):
+        """Ends the pose estimation model's run"""
         self.pose_tracker.close()
 
     def get_landmark_names(self):
+        """Returns the landmark names produces by the pose estimation model."""
         landmark_names = [
             'nose',
             'left_eye_inner', 'left_eye', 'left_eye_outer',

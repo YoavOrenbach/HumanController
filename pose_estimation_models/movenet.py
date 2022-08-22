@@ -1,23 +1,26 @@
 import tensorflow as tf
 import tensorflow_hub as hub
 import numpy as np
-from pose_estimation_models.pose_estimation_logic import PoseEstimationLogic
+from pose_estimation_models.pose_estimation_logic import PoseEstimation
 
 
-class MoveNet(PoseEstimationLogic):
-
+class MoveNet(PoseEstimation):
+    """A MoveNet class extending the PoseEstimation class"""
     def __init__(self):
         super(MoveNet, self).__init__("movenet")
         self.movenet, self.input_size = None, None
         self.sub_model = "thunder"
 
     def load_model(self):
+        """Loads the pose estimation model - here the sub model is important."""
         self.movenet, self.input_size = load_movenet_model("movenet_"+self.sub_model)
 
     def start(self):
+        """Starts the pose estimation model's run - resets the crop region."""
         self.crop_region = init_crop_region(self.image_height, self.image_width)
 
     def process_frame(self, frame):
+        """Process a frame to produce keypoints."""
         landmarks = movenet_inference_video(self.movenet, frame, self.crop_region,
                                             crop_size=[self.input_size, self.input_size])
         self.crop_region = determine_crop_region(landmarks, self.image_height, self.image_width)
@@ -25,9 +28,11 @@ class MoveNet(PoseEstimationLogic):
         return landmarks.reshape((17, 3))
 
     def end(self):
+        """Ends the pose estimation model's run - no need to implement anything for MoveNet."""
         pass
 
     def get_landmark_names(self):
+        """Returns the landmark names produces by the pose estimation model."""
         landmark_names = ['nose', 'left_eye', 'right_eye', 'left_ear', 'right_ear', 'left_shoulder', 'right_shoulder',
                           'left_elbow', 'right_elbow', 'left_wrist', 'right_wrist', 'left_hip', 'right_hip',
                           'left_knee', 'right_knee', 'left_ankle', 'right_ankle']

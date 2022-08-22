@@ -23,6 +23,10 @@ def parse_args():
 
 
 def main():
+    """
+    The main function running the application with the chosen pose estimation model, feature engineering method,
+    and classifier.
+    """
     # Parse arguments
     args = parse_args()
 

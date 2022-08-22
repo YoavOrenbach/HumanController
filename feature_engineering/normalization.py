@@ -3,6 +3,7 @@ from feature_engineering.feature_engineering_logic import FeatureEngineering
 
 
 class Normalization(FeatureEngineering):
+    """A normalization class extending the FeatureEngineering class."""
     def __init__(self, landmark_names, name="normalization"):
         super(Normalization, self).__init__(landmark_names, name)
 
@@ -53,6 +54,7 @@ class Normalization(FeatureEngineering):
         return landmarks
 
     def __call__(self, landmarks):
+        """The call method to process the landmark keypoints."""
         landmarks = self.normalize_landmarks(landmarks)
         self.input_size = landmarks.shape
         return landmarks

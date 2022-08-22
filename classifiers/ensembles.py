@@ -6,21 +6,28 @@ ENSEMBLE_SIZE = 3
 
 
 class StackedEnsemble(DLClassifier):
+    """A stacked MLP Ensemble class extending the DLClassifier class."""
     def __init__(self):
         super(StackedEnsemble, self).__init__("ensemble")
         self.input_size = None
         self.output_size = None
 
     def predict(self, model_input):
+        """Returns a softmax vector of prediction probabilities given the input.
+        Here the input is multiplied by the ensemble size."""
         predict_frame = np.expand_dims(model_input, axis=0)
         predict_frame = [predict_frame for _ in range(ENSEMBLE_SIZE)]
         return self.model(predict_frame, training=False)
 
     def define_model(self, input_size, output_size):
+        """Here defining the model only saves the input and output sizes as the model consists of several MLPs
+        that needs to train."""
         self.input_size = input_size
         self.output_size = output_size
 
     def define_stacked_model(self, members):
+        """Defines the stacked ensemble model - loads the trained MLPs, concatenates their output and sets
+         a meta learner."""
         for i in range(len(members)):
             model = members[i]
             for layer in model.layers:
@@ -34,6 +41,7 @@ class StackedEnsemble(DLClassifier):
         self.model = tf.keras.Model(inputs=ensemble_visible, outputs=output)
 
     def train_model(self, X_train, X_val, y_train, y_val, optimizer="Adam", patience=30):
+        """Trains the MLP sub-models and the meta leaner calling the super method for each."""
         sub_models = []
         for _ in range(ENSEMBLE_SIZE):
             mlp = MLP()
@@ -47,22 +55,27 @@ class StackedEnsemble(DLClassifier):
         
 
 class AvgEnsemble(DLClassifier):
+    """An Average MLP Ensemble class extending the DLClassifier class."""
     def __init__(self):
         super(AvgEnsemble, self).__init__("ensembleAvg")
         self.input_size = None
         self.output_size = None
 
     def define_model(self, input_size, output_size):
+        """Here defining the model only saves the input and output sizes as the model consists of several MLPs
+        that needs to train."""
         self.input_size = input_size
         self.output_size = output_size
 
     def define_ensemble(self, sub_models):
+        """Defines the average model by using an average layer on the output of the sub-models."""
         model_input = tf.keras.Input(shape=self.input_size)
         model_outputs = [model(model_input, training=False) for model in sub_models]
         ensemble_output = tf.keras.layers.Average()(model_outputs)
         self.model = tf.keras.Model(inputs=model_input, outputs=ensemble_output)
 
     def train_model(self, X_train, X_val, y_train, y_val, optimizer="Adam", patience=30):
+        """Trains the MLP sub-models and the average layer."""
         sub_models = []
         for i in range(ENSEMBLE_SIZE):
             mlp = MLP()

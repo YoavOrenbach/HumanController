@@ -10,30 +10,36 @@ from skimage.transform import rescale
 from skimage.util import pad as padding
 from scipy.ndimage.filters import gaussian_filter
 import os
-from pose_estimation_models.pose_estimation_logic import PoseEstimationLogic
+from pose_estimation_models.pose_estimation_logic import PoseEstimation
 
 
-class EfficientPose(PoseEstimationLogic):
+class EfficientPose(PoseEstimation):
+    """A EfficientPose class extending the PoseEstimation class"""
     def __init__(self):
         super(EfficientPose, self).__init__("efficientpose")
         self.model, self.resolution, self.lite = None, None, None
         self.sub_model = 'II_Lite'
 
     def load_model(self):
+        """Loads the pose estimation model - here the sub model is important."""
         self.model, self.resolution, self.lite = get_model(self.sub_model)
 
     def start(self):
+        """Starts the pose estimation model's run - no need for EfficientPose."""
         pass
 
     def process_frame(self, frame):
+        """Process a frame to produce keypoints."""
         coordinates = analyze(frame, self.model, self.resolution, self.lite)
         landmarks = coordinates_to_landmarks(coordinates)
         return landmarks
 
     def end(self):
+        """Ends the pose estimation model's run - no need for EfficientPose."""
         pass
 
     def get_landmark_names(self):
+        """Returns the landmark names produces by the pose estimation model."""
         landmark_names = ['head_top', 'upper_neck', 'right_shoulder', 'right_elbow', 'right_wrist', 'thorax',
                           'left_shoulder', 'left_elbow', 'left_wrist', 'pelvis', 'right_hip', 'right_knee',
                           'right_ankle', 'left_hip', 'left_knee', 'left_ankle']

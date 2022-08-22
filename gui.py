@@ -12,7 +12,7 @@ import re
 from create_dataset import collect_key_data, create_data_folder
 from train_model import controller_model
 from predict_and_play import pose_and_play, pose_and_print
-from pose_estimation_models.pose_estimation_logic import PoseEstimationLogic
+from pose_estimation_models.pose_estimation_logic import PoseEstimation
 from feature_engineering.feature_engineering_logic import FeatureEngineering
 from classifiers.classifier_logic import Classifier
 
@@ -140,18 +140,24 @@ switcher = {
 
 
 class Pose:
+    """A pose class. Each pose has an id number, a name, and the keyboard keys mapped to it."""
     def __init__(self, id: int, pose_name: String, keys: String):
+        """Initializing a pose object."""
         self.id = id
         self.name = pose_name
         self.key = keys
 
     def __str__(self):
+        """String representation of a pose object."""
         return str(self.id) + ' ' + self.name + ' ' + self.key + '\n'
 
 
 class Controller:
-    def __init__(self, root, tab_id, pose_estimation_model: PoseEstimationLogic,
+    """A controller class representing a human game controller."""
+    def __init__(self, root, tab_id, pose_estimation_model: PoseEstimation,
                  feature_engineering: FeatureEngineering, classifier: Classifier):
+        """Initializing a controller object."""
+
         # class members:
         self.root = root
         self.webcam_variable = None
@@ -207,6 +213,7 @@ class Controller:
         self.play()
 
     def webcam_settings(self):
+        """Checking for webcams and setting previews for them."""
         menu_frame = ttk.Frame(self.webcam_frame)
         menu_frame.pack(fill=tk.X, pady=5)
         preview_frame = ttk.Frame(self.webcam_frame)
@@ -232,6 +239,7 @@ class Controller:
         webcam_button.pack()
 
     def camera_preview(self):
+        """Shows a camera preview."""
         webcam_window = ttk.Toplevel(title="webcam preview")
         webcam_window.grab_set()
         width, height = 640, 480
@@ -249,6 +257,7 @@ class Controller:
         webcam_window.protocol("WM_DELETE_WINDOW", lambda: close_window(webcam_window))
 
     def show_frame(self, camera, lmain):
+        """Shows every frame."""
         _, frame = camera.read()
         frame = cv2.flip(frame, 1)
         cv2image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGBA)
@@ -259,6 +268,7 @@ class Controller:
         lmain.after(10, self.show_frame, camera, lmain)
 
     def load_data(self):
+        """This method loads previous data if existing, or creates new data otherwise - sets list of poses and log."""
         create_data_folder(self.dataset_path)
         if not os.path.isfile(self.log_path):
             with open(self.log_path, 'w') as f:
@@ -271,6 +281,7 @@ class Controller:
             self.poses.append(Pose(int(pose_info[0]), ' '.join(pose_info[1:-1]), pose_info[-1]))
 
     def create_tree(self):
+        """This method creates a ttk treview object for poses-keys mapping."""
         tree_lbl = ttk.Label(self.tree_frame, text="Click any row in the table to edit its pose")
         tree_lbl.pack(anchor='w', padx=10, pady=10)
 
@@ -295,6 +306,7 @@ class Controller:
         scroll.config(command=self.tree.yview)
 
     def table_click(self, event):
+        """Sets an event for clicking the tree table."""
         item = self.tree.focus()
         selected_pose = None
         for pose in self.poses:
@@ -303,6 +315,7 @@ class Controller:
         self.edit_pose(selected_pose)
 
     def add_pose(self):
+        """This method ads a pose object to the tree, list of poses, and the log."""
         pose_id = self.poses[-1].id + 1
         pose = Pose(pose_id, "Pose " + str(pose_id), "--")
         self.tree.insert(parent='', index='end', iid=pose.id, text='', values=(pose.id, pose.name, pose.key))
@@ -320,6 +333,7 @@ class Controller:
         #    f.write(str(pose))
 
     def update_pose(self, pose):
+        """This method updates a pose object in the tree, list of poses, and the log."""
         self.tree.item(pose.id, values=(pose.id, pose.name, pose.key))
         for i in range(len(self.poses)):
             if pose.id == self.poses[i].id:
@@ -333,6 +347,7 @@ class Controller:
             f.writelines(data)
 
     def delete_pose(self, pose, pose_dir):
+        """This method deletes a pose object from the tree,  list of poses, and the log."""
         ans = mb.askyesno("Train Question", "Are you sure you want to delete pose "+str(pose.id))
         if not ans:
             return
@@ -355,6 +370,7 @@ class Controller:
         self.edit_pose(self.poses[0])
 
     def edit_pose(self, pose):
+        """The edit pose section calling other methods for editing the pose."""
         if self.options_frame is not None:
             self.options_frame['text'] = pose.name + " options"
             for slave in self.options_frame.pack_slaves():
@@ -424,6 +440,7 @@ class Controller:
             view_pose_image(pose_dir, image_frame)
 
     def choose_keys(self, pose):
+        """This method allows choosing keyboard/mouse input keys for the given pose object."""
         self.selected_keys = []
         win = ttk.Toplevel(title="keys options")
         win.grab_set()
@@ -442,6 +459,7 @@ class Controller:
         win.protocol("WM_DELETE_WINDOW", lambda: close_window(win))
 
     def keyboard(self, win):
+        """This method shows the keyboard layout."""
         keyboard_frame = ttk.LabelFrame(win, text="Keyboard")
         keyboard_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         store_button = {}
@@ -466,6 +484,7 @@ class Controller:
                         store_button[k].pack(side='left', fill='both', expand='yes', ipadx=2, ipady=2)
 
     def mouse(self, win):
+        """This method shows the mouse layout."""
         self.images = []
         mouse_frame = ttk.LabelFrame(win, text="Mouse")
         mouse_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -522,6 +541,7 @@ class Controller:
                             movement_image1, movement_image2])
 
     def update_keys(self, key, button):
+        """This method updates the selected keys and marks their button accordingly."""
         if key in switcher:
             key = switcher[key]
         else:
@@ -534,6 +554,7 @@ class Controller:
             button['bootstyle'] = LIGHT
 
     def configure_keys(self, pose, win):
+        """This method configures the pose to have the desired keys."""
         #if len(self.selected_keys) > 2:
         #    mb.showerror("Keys Error", "Can only choose up to 2 keys")
         if len(self.selected_keys) == 0:
@@ -550,6 +571,7 @@ class Controller:
             close_window(win)
 
     def reset_keys(self, pose, win):
+        """This method resets the keys mapped to the pose."""
         if pose.key != "--":
             pose.key = "--"
         self.update_pose(pose)
@@ -557,6 +579,7 @@ class Controller:
         close_window(win)
 
     def pose_popup(self, pose, count=0):
+        """A pose popup before collecting pose data."""
         popup_msg = "Collecting data for pose " + str(pose.id)
         if pose.key == '--':
             popup_msg += "\nYou haven't chosen a key for this pose yet!"
@@ -574,11 +597,13 @@ class Controller:
             self.edit_pose(pose)
 
     def remove_pose_data(self, pose, pose_dir):
+        """Removes pose data."""
         shutil.rmtree(pose_dir)
         mb.showinfo("Removed Data", "Pose data has been removed from the computer")
         self.edit_pose(pose)
 
     def set_name(self, pose, entry):
+        """Sets the name of the pose."""
         name = entry.get()
         if name == "":
             name = "Pose " + str(pose.id)
@@ -587,6 +612,7 @@ class Controller:
         self.update_pose(pose)
 
     def train(self):
+        """Training section"""
         train_msg = "Press Train to match poses to selected keys" \
                     "\nYou only need to train once when you change or remove poses."
         train_lbl = ttk.Label(self.train_frame, text=train_msg)
@@ -595,6 +621,7 @@ class Controller:
         train_button.pack(pady=5)
 
     def train_popup(self):
+        """Train popup - if it is possible to train and the user chose yes, than the model will begin training."""
         error_flag, trained_flag, past_train_flag = False, False, False
         error_msg = "Pose data is not ready or was changed manually.\nPlease take poses before trying to train."
         trained_msg = "model is already trained.\nAre you sure you want to train again?"
@@ -633,6 +660,7 @@ class Controller:
                 f.writelines(data)
 
     def play(self):
+        """Play section."""
         if self.pose_estimation_model.get_name() == "movenet":
             model_msg = "You can choose between a more accurate model and a faster model"
             ttk.Label(self.play_frame, text=model_msg).pack(anchor='w', padx=10, pady=5)
@@ -671,6 +699,7 @@ class Controller:
         info_button.pack(side=tk.LEFT, padx=10)
 
     def play_popup(self, print_flag=False):
+        """Play popup - if it is possible to play after training then keys will begin to be simulated."""
         train_flag, keys_flag = False, False
         train_msg = "Model is not trained.\nPlease train the model before playing."
         keys_msg = "Some poses don't have keys yet.\nPlease choose a key for every pose so they can be pressed."
@@ -702,6 +731,7 @@ class Controller:
                 self.pose_estimation_model.set_sub_model("thunder")
 
     def update_index(self, tab_id):
+        """Updates the paths of the controller by the given index."""
         self.dataset_path = "datasets/dataset" + str(tab_id)
         self.log_path = "logs/log" + str(tab_id) + ".txt"
         self.model_dir = "saved_models/model" + str(tab_id)
@@ -710,19 +740,24 @@ class Controller:
 
 
 class Tab:
+    """A tab class for a controller object. Each tab has a frame id, a name, and a ttk frame."""
     def __init__(self, frame_id: int, name: String, frame: ttk.Frame):
+        """Initializing a tab object."""
         self.id = frame_id
         self.name = name
         self.frame = frame
         self.controller = None
 
     def __str__(self):
+        """String representation of a tab object."""
         return str(self.id) + ' ' + self.name + '\n'
 
 
 class HumanControllerApp:
-    def __init__(self, root, pose_estimation_model: PoseEstimationLogic,
+    """A class representing the human controller app - multiple controllers for every game."""
+    def __init__(self, root, pose_estimation_model: PoseEstimation,
                  feature_engineering: FeatureEngineering, classifier: Classifier):
+        """Initializing the app."""
         self.root = root
         self.heading()
         if not self.check_webcam():
@@ -738,6 +773,7 @@ class HumanControllerApp:
         center(self.root)
 
     def heading(self):
+        """Sets the heading of the gui."""
         #ttk.Style("darkly")
         width, height = self.root.winfo_screenwidth(), self.root.winfo_screenheight()
         if width == 3840 and height == 2160:  # 4k
@@ -756,6 +792,7 @@ class HumanControllerApp:
         separator.pack(fill=tk.X, padx=20)
 
     def check_webcam(self):
+        """Checks if there are available webcams. In not - the app cannot be used."""
         camera_ports = find_camera_ports()
         if len(camera_ports) == 0:
             no_webcam_found_msg = "No webcam found. Please connect a webcam to use human controller"
@@ -766,6 +803,7 @@ class HumanControllerApp:
         return True
 
     def load_tabs(self):
+        """Load existing general data, if not then it creates it and updates the log, the tab list and the notebook."""
         create_data_folder("datasets")
         create_data_folder("logs")
         create_data_folder("saved_models")
@@ -786,6 +824,7 @@ class HumanControllerApp:
         self.add_tab()
 
     def controller_tab(self, tab):
+        """Creates a controller tab by instantiating a controller object and adding general options."""
         tab.controller = Controller(tab.frame, tab.id, self.pose_estimation_model, self.feature_engineering, self.classifier)
         options_frame = ttk.LabelFrame(tab.frame, text="Controller options")
         options_frame.grid(row=0, column=1, sticky='nsew', padx=10, pady=10, ipady=5)
@@ -807,6 +846,7 @@ class HumanControllerApp:
         delete_button.pack(side=tk.BOTTOM, fill=tk.X, padx=10)
 
     def add_tab(self):
+        """The + add tab for adding another controller tab."""
         add_frame = ttk.Frame(self.notebook, width=1000, height=750)
         add_frame.pack(fill=tk.BOTH, expand=True)
         self.notebook.add(add_frame, text='+')
@@ -819,6 +859,7 @@ class HumanControllerApp:
         self.add_button.pack(padx=10, pady=10)
 
     def add_controller(self, frame):
+        """Adds a controller to the notebook, tab list, and general log."""
         self.add_lbl.pack_forget()
         self.add_button.pack_forget()
         frame_id = self.tabs[-1].id + 1 if self.tabs else 1
@@ -831,6 +872,7 @@ class HumanControllerApp:
         self.add_tab()
 
     def set_name(self, tab, entry):
+        """Sets the name of the controller."""
         name = entry.get()
         if name == "":
             name = "Controller " + str(tab.id)
@@ -839,6 +881,7 @@ class HumanControllerApp:
         self.update_controller(tab)
 
     def update_controller(self, tab):
+        """Updates a controller in the notebook, tab list, and general log."""
         self.notebook.tab(tab.id - 1, text=tab.name)
         for i in range(len(self.tabs)):
             if tab.id == self.tabs[i].id:
@@ -851,6 +894,7 @@ class HumanControllerApp:
             f.writelines(data)
 
     def delete_controller(self, tab):
+        """Deletes a controller from the notebook, tab list, and general log."""
         ans = mb.askyesno("Train Question", "Are you sure you want to delete controller "+str(tab.id))
         if not ans:
             return
@@ -905,11 +949,13 @@ def center(win):
 
 
 def close_window(win):
+    """Closes a tkinter window."""
     win.grab_release()
     win.destroy()
 
 
 def find_camera_ports():
+    """Finds all available camera ports."""
     port = 0
     port_list = []
     camera = cv2.VideoCapture(port, cv2.CAP_DSHOW)
@@ -922,10 +968,12 @@ def find_camera_ports():
 
 
 def check_pose_directory(pose_dir):
+    """Checks if the pose directory exists."""
     return os.path.exists(pose_dir) and os.path.isdir(pose_dir) and len(os.listdir(pose_dir)) != 0
 
 
 def view_pose_image(pose_dir, frame):
+    """shows a single pose image."""
     pose_images = os.listdir(pose_dir)
     path = os.path.join(pose_dir, pose_images[len(pose_images)//2])
     image_ = Image.open(path)
@@ -937,6 +985,7 @@ def view_pose_image(pose_dir, frame):
 
 
 def all_pose_images(pose_dir):
+    """Shows all pose image in a tkinter canvas."""
     win = ttk.Toplevel(title="Pose Images")
     win.grab_set()
     win.resizable(width=False, height=False)
@@ -967,7 +1016,8 @@ def all_pose_images(pose_dir):
     win.protocol("WM_DELETE_WINDOW", lambda: close_window(win))
 
 
-def app(pose_estimation_model: PoseEstimationLogic, feature_engineering: FeatureEngineering, classifier: Classifier):
+def app(pose_estimation_model: PoseEstimation, feature_engineering: FeatureEngineering, classifier: Classifier):
+    """Creating a human controller app object and running the main loop."""
     #root_gui = tk.Tk()
     root_gui = ttk.Window(themename="darkly")
     HumanControllerApp(root_gui, pose_estimation_model, feature_engineering, classifier)
