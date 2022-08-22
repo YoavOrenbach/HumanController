@@ -108,10 +108,11 @@ As default we use the models that achieved the best performance:
  
 However, it is possible to run the program with any other model or method that we tested as detailed in the project book.
 
-Use '-p' for pose estimation, '-f' for feature engineering , and '-c' for classifier, where all available options are in factory.py for instance:
+Use '-p' for pose estimation, '-f' for feature engineering , and '-c' for classifier, where all available options are in factory.py. For instance you could run:
 ```sh
 python main.py -p blazepose -f normalization -c knn
 ```
+To run the application with the BlazePose pose estimation model, normalization of keypoints feature engineering method, and the KNN classifier.
 
 <p align="right">(<a href="#top">back to top</a>)</p>
 
